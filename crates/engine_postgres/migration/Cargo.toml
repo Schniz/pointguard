@@ -10,6 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 async-std = { version = "1", features = ["attributes", "tokio1"] }
+nanoid = "0.4.0"
 
 [dependencies.sea-orm-migration]
 version = "0.12.0"

@@ -7,7 +7,12 @@ edition = "2021"
 
 [dependencies]
 aide = { version = "0.12.0", features = ["axum", "redoc"] }
-schemars = "0.8.15"
+schemars = { version = "0.8.15", features = ["url"] }
 pointguard_dependencies = { path = "../dependencies" }
 axum = "0.6.20"
 tokio = { version = "1.33.0", features = ["full"] }
+pointguard_engine_postgres = { path = "../engine_postgres" }
+serde = { version = "1.0.192", features = ["derive"] }
+nanoid = "0.4.0"
+serde_json = "1.0.108"
+url = { version = "2.4.1", features = ["serde"] }

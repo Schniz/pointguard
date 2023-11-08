@@ -567,8 +567,10 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets",
 ]
 
@@ -1372,6 +1374,7 @@ name = "migration"
 version = "0.1.0"
 dependencies = [
  "async-std",
+ "nanoid",
  "sea-orm-migration",
 ]
 
@@ -1405,6 +1408,15 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys",
+]
+
+[[package]]
+name = "nanoid"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ffa00dec017b5b1a8b7cf5e2c008bfda1aa7e0697ac1508b491fdf2622fb4d8"
+dependencies = [
+ "rand",
 ]
 
 [[package]]
@@ -1659,6 +1671,7 @@ name = "pointguard_dependencies"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1666,6 +1679,7 @@ name = "pointguard_engine_postgres"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "sea-orm",
  "tokio",
 ]
@@ -1676,9 +1690,14 @@ version = "0.1.0"
 dependencies = [
  "aide",
  "axum",
+ "nanoid",
  "pointguard_dependencies",
+ "pointguard_engine_postgres",
  "schemars",
+ "serde",
+ "serde_json",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -2060,6 +2079,7 @@ dependencies = [
  "schemars_derive",
  "serde",
  "serde_json",
+ "url",
 ]
 
 [[package]]
@@ -3023,6 +3043,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
