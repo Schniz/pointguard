@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use aide::{
     axum::{
         routing::{get, post},
@@ -86,6 +88,9 @@ async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool)
 }
 
 async fn task_queue_loop(db: db::postgres::PgPool) {
+    let mut listener = db::TaskListener::new(&db)
+        .await
+        .expect("listen to task queue");
     loop {
         let mut tasks = db::free_tasks(&db, 5).await.unwrap_or_else(|err| {
             tracing::error!("Can't fetch tasks: {err}");
@@ -93,7 +98,12 @@ async fn task_queue_loop(db: db::postgres::PgPool) {
         });
 
         if tasks.is_empty() {
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::select! {
+                _ = tokio::time::sleep(std::time::Duration::from_secs(20)) => {},
+                _ = listener.take() => {
+                    tracing::info!("woke up from listener");
+                },
+            }
             continue;
         }
 
@@ -114,9 +124,14 @@ async fn main() {
     tracing_subscriber::fmt().pretty().init();
     tracing::info!("Set up!");
 
-    let db = db::postgres::PgPool::connect(&std::env::var("DATABASE_URL").unwrap())
+    let connection_opts =
+        db::postgres::PgConnectOptions::from_str(std::env::var("DATABASE_URL").unwrap().as_str())
+            .expect("parse db url")
+            .application_name(&format!("pointguard:{}", nanoid::nanoid!()));
+    let db = db::postgres::PgPoolOptions::new()
+        .connect_with(connection_opts)
         .await
-        .unwrap();
+        .expect("connect to db");
 
     tokio::spawn(task_queue_loop(db.clone()));
 
