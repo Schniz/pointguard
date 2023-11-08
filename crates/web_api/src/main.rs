@@ -7,12 +7,10 @@ use aide::{
     redoc::Redoc,
 };
 use axum::{extract::State, Extension, Json};
-use pointguard_engine_postgres::{
-    sea_orm::{sea_query::OnConflict, Database, DatabaseConnection},
-    task,
-};
+use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tracing::Instrument;
 
 fn generate_nanoid() -> String {
     nanoid::nanoid!()
@@ -20,7 +18,7 @@ fn generate_nanoid() -> String {
 
 #[derive(Clone)]
 struct AppState {
-    db: DatabaseConnection,
+    db: db::postgres::PgPool,
 }
 
 async fn stub() -> impl IntoApiResponse {
@@ -29,7 +27,7 @@ async fn stub() -> impl IntoApiResponse {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-struct NewTask {
+struct NewTaskBody {
     /// A name for the task. If not provided, a random name will be generated.
     /// This is useful to throttle tasks of the same type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -45,33 +43,81 @@ struct NewTask {
 /// Post task?
 async fn post_tasks(
     State(state): State<AppState>,
-    Json(new_task): Json<NewTask>,
+    Json(new_task): Json<NewTaskBody>,
 ) -> impl IntoApiResponse {
-    use pointguard_engine_postgres::sea_orm::{prelude::*, Set};
-
-    let task = task::Entity::insert(task::ActiveModel {
-        name: Set(new_task.name.unwrap_or_else(generate_nanoid)),
-        job_name: Set(new_task.job_name),
-        data: Set(new_task.data.unwrap_or_default()),
-        ..Default::default()
-    })
-    .on_conflict(
-        OnConflict::columns(vec![task::Column::Name, task::Column::JobName])
-            .do_nothing()
-            .to_owned(),
+    let id = db::enqueue(
+        &state.db,
+        &db::NewTask {
+            job_name: new_task.job_name,
+            data: new_task.data.unwrap_or_default(),
+            endpoint: new_task.endpoint.to_string(),
+            name: new_task.name.unwrap_or_else(generate_nanoid),
+        },
     )
-    .exec(&state.db)
     .await
     .unwrap();
+    Json(id)
+}
 
-    Json(task.last_insert_id)
+async fn task_queue_loop(db: db::postgres::PgPool) {
+    loop {
+        let mut tasks = db::free_tasks(&db, 5).await.unwrap_or_else(|err| {
+            tracing::error!("Can't fetch tasks: {err}");
+            vec![]
+        });
+
+        if tasks.is_empty() {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            continue;
+        }
+
+        for task in tasks.drain(..) {
+            let db = db.clone();
+            let span =
+                tracing::info_span!("task_invocation", id = %task.id, endpoint = %task.endpoint);
+            tokio::spawn(
+                async move {
+                    let db = db;
+                    let client = reqwest::Client::new();
+
+                    let response = client
+                        .post(&task.endpoint)
+                        .json(&task.data)
+                        .send()
+                        .await
+                        .and_then(|res| res.error_for_status());
+
+                    match response {
+                        Ok(_) => {
+                            tracing::info!("invocation completed");
+                            task.done(&db).await;
+                        }
+                        Err(err) => {
+                            tracing::error!("invocation failed: {err}");
+                            task.release(&db).await;
+                        }
+                    }
+                }
+                .instrument(span),
+            );
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() {
-    let db = Database::connect(std::env::var("DATABASE_URL").unwrap())
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "pointguard=debug");
+    }
+
+    tracing_subscriber::fmt().pretty().init();
+    tracing::info!("Set up!");
+
+    let db = db::postgres::PgPool::connect(&std::env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
+
+    tokio::spawn(task_queue_loop(db.clone()));
 
     let mut api = OpenApi {
         info: Info {

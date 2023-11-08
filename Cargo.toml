@@ -1,8 +1,3 @@
 [workspace]
-members = [
-  "crates/dependencies",
-  "crates/web_api",
-  "crates/engine_postgres",
-  "crates/engine_postgres/migration",
-]
+members = ["crates/dependencies", "crates/web_api", "crates/engine_postgres"]
 resolver = "2"
