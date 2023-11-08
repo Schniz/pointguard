@@ -45,7 +45,7 @@ struct NewTaskBody {
     run_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-/// Post task?
+#[tracing::instrument(skip_all, fields(%new_task.job_name))]
 async fn post_tasks(
     State(state): State<AppState>,
     Json(new_task): Json<NewTaskBody>,
@@ -61,11 +61,10 @@ async fn post_tasks(
         },
     )
     .await
-    .unwrap();
+    .expect("enqueue task");
     Json(id)
 }
 
-// tracing::info_span!("task_invocation", id = %task.id, endpoint = %task.endpoint);
 #[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
 async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
     let response = http
@@ -122,7 +121,6 @@ async fn main() {
     }
 
     tracing_subscriber::fmt().pretty().init();
-    tracing::info!("Set up!");
 
     let connection_opts =
         db::postgres::PgConnectOptions::from_str(std::env::var("DATABASE_URL").unwrap().as_str())
@@ -156,10 +154,19 @@ async fn main() {
         .finish_api_with(&mut api, |api| api.default_response::<String>())
         .layer(Extension(api));
 
-    axum::Server::bind(&"127.0.0.1:8080".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+
+    let server = axum::Server::bind(&"127.0.0.1:8080".parse().unwrap());
+
+    use colored::Colorize;
+    let orange = colored::CustomColor::new(255, 140, 0);
+    let url = format!("http://{}:{}", host, port).custom_color(orange);
+    eprintln!();
+    eprintln!("  🏀 pointguard is ready to play at {url}",);
+    eprintln!();
+
+    server.serve(app.into_make_service()).await.unwrap();
 }
 
 async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
