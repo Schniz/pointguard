@@ -7,10 +7,10 @@ use aide::{
     redoc::Redoc,
 };
 use axum::{extract::State, Extension, Json};
+use db::postgres::PgPool;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::Instrument;
 
 fn generate_nanoid() -> String {
     nanoid::nanoid!()
@@ -38,6 +38,9 @@ struct NewTaskBody {
     data: Option<serde_json::Value>,
     /// The pointguard endpoint that'll be invoked
     endpoint: url::Url,
+    /// When to run the task. If not provided, it'll run as soon as possible.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    run_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Post task?
@@ -52,11 +55,34 @@ async fn post_tasks(
             data: new_task.data.unwrap_or_default(),
             endpoint: new_task.endpoint.to_string(),
             name: new_task.name.unwrap_or_else(generate_nanoid),
+            run_at: new_task.run_at,
         },
     )
     .await
     .unwrap();
     Json(id)
+}
+
+// tracing::info_span!("task_invocation", id = %task.id, endpoint = %task.endpoint);
+#[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
+async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
+    let response = http
+        .post(&task.endpoint)
+        .json(&task.data)
+        .send()
+        .await
+        .and_then(|res| res.error_for_status());
+
+    match response {
+        Ok(_) => {
+            tracing::info!("invocation completed");
+            task.done(&db).await;
+        }
+        Err(err) => {
+            tracing::error!("invocation failed: {err}");
+            task.release(&db).await;
+        }
+    }
 }
 
 async fn task_queue_loop(db: db::postgres::PgPool) {
@@ -71,35 +97,10 @@ async fn task_queue_loop(db: db::postgres::PgPool) {
             continue;
         }
 
+        let http = reqwest::Client::new();
+
         for task in tasks.drain(..) {
-            let db = db.clone();
-            let span =
-                tracing::info_span!("task_invocation", id = %task.id, endpoint = %task.endpoint);
-            tokio::spawn(
-                async move {
-                    let db = db;
-                    let client = reqwest::Client::new();
-
-                    let response = client
-                        .post(&task.endpoint)
-                        .json(&task.data)
-                        .send()
-                        .await
-                        .and_then(|res| res.error_for_status());
-
-                    match response {
-                        Ok(_) => {
-                            tracing::info!("invocation completed");
-                            task.done(&db).await;
-                        }
-                        Err(err) => {
-                            tracing::error!("invocation failed: {err}");
-                            task.release(&db).await;
-                        }
-                    }
-                }
-                .instrument(span),
-            );
+            tokio::spawn(execute_task(http.clone(), task, db.clone()));
         }
     }
 }
@@ -128,12 +129,16 @@ async fn main() {
     };
 
     let app = ApiRouter::new()
-        .api_route_with("/api/v1/version", get(stub), |r| r.description("hello"))
-        .api_route("/api/v1/tasks", post(post_tasks))
+        .api_route_with("/api/v1/version", get(stub), |r| {
+            r.tag("v1").description("hello").summary("what?")
+        })
+        .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
+            r.tag("v1").description("hello").summary("what?")
+        })
         .route("/api", Redoc::new("/api/openapi.json").axum_route())
         .route("/api/openapi.json", get(serve_api))
         .with_state(AppState { db })
-        .finish_api(&mut api)
+        .finish_api_with(&mut api, |api| api.default_response::<String>())
         .layer(Extension(api));
 
     axum::Server::bind(&"127.0.0.1:8080".parse().unwrap())

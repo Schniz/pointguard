@@ -9,6 +9,6 @@ edition = "2021"
 async-trait = "0.1.74"
 chrono = "0.4.31"
 serde_json = "1.0.108"
-sqlx = { version = "0.7.2", features = ["postgres", "runtime-tokio"] }
+sqlx = { version = "0.7.2", features = ["postgres", "runtime-tokio", "chrono"] }
 tokio = { version = "1.33.0", features = ["full"] }
 tracing = "0.1.40"

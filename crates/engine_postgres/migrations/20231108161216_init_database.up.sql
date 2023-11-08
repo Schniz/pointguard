@@ -3,13 +3,13 @@ CREATE TABLE tasks (
   name varchar(255) not null,
   job_name varchar(255) not null,
   endpoint varchar(1024) not null,
-  created_at timestamp not null default now(),
-  updated_at timestamp not null default now(),
-  runnable_at timestamp not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  runnable_at timestamptz not null default now(),
   data jsonb not null default 'null',
 
   worker_id varchar(100),
-  started_at timestamp,
+  started_at timestamptz,
 
   unique(name, job_name, endpoint)
 );

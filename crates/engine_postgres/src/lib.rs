@@ -110,13 +110,14 @@ pub struct NewTask {
     pub data: serde_json::Value,
     pub endpoint: String,
     pub name: String,
+    pub run_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Error> {
     let id = sqlx::query!(
         "
-        INSERT INTO tasks (job_name, data, endpoint, name)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO tasks (job_name, data, endpoint, name, runnable_at)
+        VALUES ($1, $2, $3, $4, COALESCE($5, now()))
         ON CONFLICT (job_name, name, endpoint) DO UPDATE
         SET
             updated_at = now()
@@ -126,6 +127,7 @@ pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Err
         task.data,
         task.endpoint,
         task.name,
+        task.run_at,
     )
     .fetch_one(db)
     .await?;
