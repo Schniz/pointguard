@@ -35,7 +35,7 @@ impl InflightTask {
         //     SET
         //         worker_id = NULL,
         //         started_at = NULL,
-        //         runnable_at = now() + INTERVAL '1 minute',
+        //         run_at = now() + INTERVAL '1 minute',
         //         updated_at = now()
         //     WHERE
         //         id = $1
@@ -70,7 +70,7 @@ pub async fn free_tasks(db: &sqlx::PgPool, count: i64) -> Result<Vec<InflightTas
         SELECT id, job_name, data, endpoint, name, false as \"cleaned_up!\" FROM tasks
         LEFT JOIN running_workers ON tasks.worker_id = running_workers.application_name
         WHERE running_workers.application_name IS NULL
-          AND runnable_at <= NOW()
+          AND run_at <= NOW()
         FOR UPDATE
         SKIP LOCKED
         LIMIT $1
@@ -116,7 +116,7 @@ pub struct NewTask {
 pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Error> {
     let id = sqlx::query!(
         "
-        INSERT INTO tasks (job_name, data, endpoint, name, runnable_at)
+        INSERT INTO tasks (job_name, data, endpoint, name, run_at)
         VALUES ($1, $2, $3, $4, COALESCE($5, now()))
         ON CONFLICT (job_name, name, endpoint) DO UPDATE
         SET
