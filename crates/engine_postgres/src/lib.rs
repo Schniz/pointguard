@@ -169,4 +169,16 @@ pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Err
     Ok(id.id)
 }
 
+use std::str::FromStr;
+
 pub use sqlx::postgres;
+use sqlx::PgPool;
+
+pub async fn connect(url: &str) -> Result<PgPool, sqlx::Error> {
+    let connection_opts = sqlx::postgres::PgConnectOptions::from_str(url)
+        .expect("parse db url")
+        .application_name(&format!("pointguard:{}", nanoid::nanoid!()));
+    sqlx::postgres::PgPoolOptions::new()
+        .connect_with(connection_opts)
+        .await
+}

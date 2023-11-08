@@ -1,4 +1,5 @@
-use std::str::FromStr;
+mod logging;
+mod task_loop;
 
 use aide::{
     axum::{
@@ -9,7 +10,6 @@ use aide::{
     redoc::Redoc,
 };
 use axum::{extract::State, Extension, Json};
-use db::postgres::PgPool;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -65,91 +65,32 @@ async fn post_tasks(
     Json(id)
 }
 
-#[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
-async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
-    let response = http
-        .post(&task.endpoint)
-        .json(&task.data)
-        .send()
-        .await
-        .and_then(|res| res.error_for_status());
-
-    match response {
-        Ok(_) => {
-            tracing::info!("invocation completed");
-            task.done(&db).await;
-        }
-        Err(err) => {
-            tracing::error!("invocation failed: {err}");
-            task.release(&db).await;
-        }
-    }
-}
-
-async fn task_queue_loop(db: db::postgres::PgPool) {
-    let mut listener = db::TaskListener::new(&db)
-        .await
-        .expect("listen to task queue");
-    loop {
-        let mut tasks = db::free_tasks(&db, 5).await.unwrap_or_else(|err| {
-            tracing::error!("Can't fetch tasks: {err}");
-            vec![]
-        });
-
-        if tasks.is_empty() {
-            tokio::select! {
-                _ = tokio::time::sleep(std::time::Duration::from_secs(20)) => {},
-                _ = listener.take() => {
-                    tracing::info!("woke up from listener");
-                },
-            }
-            continue;
-        }
-
-        let http = reqwest::Client::new();
-
-        for task in tasks.drain(..) {
-            tokio::spawn(execute_task(http.clone(), task, db.clone()));
-        }
-    }
-}
-
 #[tokio::main]
 async fn main() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "pointguard=debug");
-    }
-
-    tracing_subscriber::fmt().pretty().init();
-
-    let connection_opts =
-        db::postgres::PgConnectOptions::from_str(std::env::var("DATABASE_URL").unwrap().as_str())
-            .expect("parse db url")
-            .application_name(&format!("pointguard:{}", nanoid::nanoid!()));
-    let db = db::postgres::PgPoolOptions::new()
-        .connect_with(connection_opts)
+    logging::init();
+    let db = db::connect(&std::env::var("DATABASE_URL").expect("database url"))
         .await
         .expect("connect to db");
 
-    tokio::spawn(task_queue_loop(db.clone()));
+    tokio::spawn(task_loop::run(db.clone()));
 
     let mut api = OpenApi {
         info: Info {
-            description: Some("an example API".to_string()),
+            description: Some("pointguard api".to_string()),
             ..Info::default()
         },
         ..OpenApi::default()
     };
 
     let app = ApiRouter::new()
-        .api_route_with("/api/v1/version", get(stub), |r| {
-            r.tag("v1").description("hello").summary("what?")
-        })
-        .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
-            r.tag("v1").description("hello").summary("what?")
-        })
         .route("/api", Redoc::new("/api/openapi.json").axum_route())
         .route("/api/openapi.json", get(serve_api))
+        .api_route_with("/api/v1/version", get(stub), |r| {
+            r.description("hello").summary("what?")
+        })
+        .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
+            r.description("hello").summary("what?")
+        })
         .with_state(AppState { db })
         .finish_api_with(&mut api, |api| api.default_response::<String>())
         .layer(Extension(api));
@@ -157,15 +98,8 @@ async fn main() {
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 
-    let server = axum::Server::bind(&"127.0.0.1:8080".parse().unwrap());
-
-    use colored::Colorize;
-    let orange = colored::CustomColor::new(255, 140, 0);
-    let url = format!("http://{}:{}", host, port).custom_color(orange);
-    eprintln!();
-    eprintln!("  🏀 pointguard is ready to play at {url}",);
-    eprintln!();
-
+    let server = axum::Server::bind(&format!("{host}:{port}").parse().unwrap());
+    logging::print_welcome_message(&host, &port);
     server.serve(app.into_make_service()).await.unwrap();
 }
 
