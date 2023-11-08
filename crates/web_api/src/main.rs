@@ -5,12 +5,18 @@ use aide::{
 };
 use axum::{Extension, Json};
 
+fn v1_router() -> ApiRouter {
+    ApiRouter::new().api_route("/hello", get(hello_world))
+}
+
 #[tokio::main]
 async fn main() {
-    let app = ApiRouter::new()
-        .api_route("/hello", get(hello_world))
-        .route("/redoc", Redoc::new("/api.json").axum_route())
-        .route("/api.json", get(serve_api));
+    let api_router = ApiRouter::new()
+        .nest("/v1", v1_router())
+        .route("/", Redoc::new("/api/openapi.json").axum_route())
+        .route("/openapi.json", get(serve_api));
+
+    let app = ApiRouter::new().nest("/api", api_router);
 
     let mut api = OpenApi {
         info: Info {
