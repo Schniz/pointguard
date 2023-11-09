@@ -1,6 +1,3 @@
-mod logging;
-mod task_loop;
-
 use aide::{
     axum::{
         routing::{get, post},
@@ -10,6 +7,7 @@ use aide::{
     redoc::Redoc,
 };
 use axum::{extract::State, Extension, Json};
+use db::postgres::PgPool;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -65,42 +63,43 @@ async fn post_tasks(
     Json(id)
 }
 
-#[tokio::main]
-async fn main() {
-    logging::init();
-    let db = db::connect(&std::env::var("DATABASE_URL").expect("database url"))
-        .await
-        .expect("connect to db");
+pub struct Server {
+    pub pool: PgPool,
+    pub host: String,
+    pub port: u16,
+    pub on_bind: Box<dyn FnOnce() + Send + Sync>,
+}
 
-    tokio::spawn(task_loop::run(db.clone()));
+impl Server {
+    pub async fn serve(self) {
+        let mut api = OpenApi {
+            info: Info {
+                description: Some("pointguard api".to_string()),
+                ..Info::default()
+            },
+            ..OpenApi::default()
+        };
 
-    let mut api = OpenApi {
-        info: Info {
-            description: Some("pointguard api".to_string()),
-            ..Info::default()
-        },
-        ..OpenApi::default()
-    };
+        let app = ApiRouter::new()
+            .route("/api", Redoc::new("/api/openapi.json").axum_route())
+            .route("/api/openapi.json", get(serve_api))
+            .api_route_with("/api/v1/version", get(stub), |r| {
+                r.description("hello").summary("what?")
+            })
+            .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
+                r.description("hello").summary("what?")
+            })
+            .with_state(AppState { db: self.pool })
+            .finish_api_with(&mut api, |api| api.default_response::<String>())
+            .layer(Extension(api));
 
-    let app = ApiRouter::new()
-        .route("/api", Redoc::new("/api/openapi.json").axum_route())
-        .route("/api/openapi.json", get(serve_api))
-        .api_route_with("/api/v1/version", get(stub), |r| {
-            r.description("hello").summary("what?")
-        })
-        .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
-            r.description("hello").summary("what?")
-        })
-        .with_state(AppState { db })
-        .finish_api_with(&mut api, |api| api.default_response::<String>())
-        .layer(Extension(api));
+        let host = self.host;
+        let port = self.port;
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-
-    let server = axum::Server::bind(&format!("{host}:{port}").parse().unwrap());
-    logging::print_welcome_message(&host, &port);
-    server.serve(app.into_make_service()).await.unwrap();
+        let server = axum::Server::bind(&format!("{host}:{port}").parse().unwrap());
+        (self.on_bind)();
+        server.serve(app.into_make_service()).await.unwrap();
+    }
 }
 
 async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {

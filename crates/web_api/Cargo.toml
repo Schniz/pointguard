@@ -3,8 +3,6 @@ name = "pointguard_web_api"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 aide = { version = "0.12.0", features = ["axum", "redoc"] }
 schemars = { version = "0.8.15", features = ["url", "chrono"] }
@@ -17,10 +15,4 @@ nanoid = "0.4.0"
 serde_json = "1.0.108"
 url = { version = "2.4.1", features = ["serde"] }
 tracing = "0.1.40"
-reqwest = { version = "0.11.22", features = [
-  "rustls",
-  "json",
-], default-features = false }
-tracing-subscriber = { version = "0.3.17", features = ["fmt", "env-filter"] }
 chrono = { version = "0.4.31", features = ["serde"] }
-colored = "2.0.4"

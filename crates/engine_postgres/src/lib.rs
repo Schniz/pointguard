@@ -182,3 +182,9 @@ pub async fn connect(url: &str) -> Result<PgPool, sqlx::Error> {
         .connect_with(connection_opts)
         .await
 }
+
+pub async fn migrate(url: &str) -> Result<(), sqlx::Error> {
+    let pool = connect(url).await?;
+    sqlx::migrate!().run(&pool).await?;
+    Ok(())
+}
