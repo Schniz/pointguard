@@ -380,17 +380,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derivative"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -511,17 +500,6 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "spin 0.9.8",
-]
-
-[[package]]
-name = "fly-accept-encoding"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3afa7516fdcfd8e5e93a938f8fec857785ced190a1f62d842d1fe1ffbe22ba8"
-dependencies = [
- "http",
- "itertools 0.10.5",
- "thiserror",
 ]
 
 [[package]]
@@ -716,7 +694,7 @@ dependencies = [
  "log",
  "pest",
  "pest_derive",
- "rust-embed 8.0.0",
+ "rust-embed",
  "serde",
  "serde_json",
  "thiserror",
@@ -949,15 +927,6 @@ dependencies = [
  "hermit-abi",
  "rustix",
  "windows-sys",
-]
-
-[[package]]
-name = "itertools"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
 ]
 
 [[package]]
@@ -1446,11 +1415,10 @@ dependencies = [
  "notify",
  "pointguard_dependencies",
  "pointguard_engine_postgres",
- "rust-embed 8.0.0",
+ "rust-embed",
  "schemars",
  "serde",
  "serde_json",
- "serve_embed",
  "tokio",
  "tower",
  "tower-http",
@@ -1632,36 +1600,12 @@ dependencies = [
 
 [[package]]
 name = "rust-embed"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
-dependencies = [
- "rust-embed-impl 6.8.1",
- "rust-embed-utils 7.8.1",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1e7d90385b59f0a6bf3d3b757f3ca4ece2048265d70db20a2016043d4509a40"
 dependencies = [
- "rust-embed-impl 8.0.0",
- "rust-embed-utils 8.0.0",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-impl"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49b94b81e5b2c284684141a2fb9e2a31be90638caf040bf9afbc5a0416afe1ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "rust-embed-utils 7.8.1",
- "syn 2.0.39",
+ "rust-embed-impl",
+ "rust-embed-utils",
  "walkdir",
 ]
 
@@ -1673,19 +1617,8 @@ checksum = "3c3d8c6fd84090ae348e63a84336b112b5c3918b3bf0493a581f7bd8ee623c29"
 dependencies = [
  "proc-macro2",
  "quote",
- "rust-embed-utils 8.0.0",
+ "rust-embed-utils",
  "syn 2.0.39",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-utils"
-version = "7.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d38ff6bf570dc3bb7100fce9f7b60c33fa71d80e88da3f2580df4ff2bdded74"
-dependencies = [
- "mime_guess",
- "sha2",
  "walkdir",
 ]
 
@@ -1899,28 +1832,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serve_embed"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677cc12c88134ce6e79bbfa9d4aa23548285fb952051f78efc78c4b0d8236d9f"
-dependencies = [
- "axum",
- "bytes",
- "derivative",
- "fly-accept-encoding",
- "futures-util",
- "http",
- "http-body",
- "http-range-header",
- "httpdate",
- "hyper",
- "log",
- "rust-embed 6.8.1",
- "tokio",
- "tower",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2036,7 +1947,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b7b278788e7be4d0d29c0f39497a0eef3fba6bbc8e70d8bf7fde46edeaa9e85"
 dependencies = [
- "itertools 0.11.0",
+ "itertools",
  "nom",
  "unicode_categories",
 ]
