@@ -1,3 +1,4 @@
+mod public;
 mod views;
 
 use crate::AppState;
@@ -23,6 +24,7 @@ pub(crate) fn admin_routes() -> ApiRouter<AppState> {
     ApiRouter::new()
         .route("/", get(index))
         .layer(Extension(handlebars))
+        .nest_service("/assets/", public::serve())
 }
 
 async fn index(Extension(handlebars): Extension<Handlebars<'_>>) -> impl IntoResponse {
@@ -37,16 +39,17 @@ pub(crate) fn attach_views_reloader(
 ) -> notify::FsEventWatcher {
     use notify::Watcher;
     let mut watcher = notify::recommended_watcher(move |_| reloader.reload()).unwrap();
+    let root = PathBuf::from(file!())
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .unwrap()
+        .to_path_buf();
     watcher
-        .watch(
-            &PathBuf::from(file!())
-                .parent()
-                .and_then(Path::parent)
-                .and_then(Path::parent)
-                .unwrap()
-                .join("views"),
-            notify::RecursiveMode::Recursive,
-        )
+        .watch(&root.join("views"), notify::RecursiveMode::Recursive)
+        .unwrap();
+    watcher
+        .watch(&root.join("public"), notify::RecursiveMode::Recursive)
         .unwrap();
     watcher
 }

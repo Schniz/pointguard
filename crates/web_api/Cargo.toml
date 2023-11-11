@@ -19,4 +19,8 @@ chrono = { version = "0.4.31", features = ["serde"] }
 tower-livereload = "0.8.2"
 handlebars = { version = "4.5.0", features = ["dir_source", "rust-embed"] }
 notify = "6.1.1"
-rust-embed = "8.0.0"
+rust-embed = { version = "8.0.0", features = ["mime-guess"] }
+tower-http = { version = "0.4.4", features = ["fs"] }
+http = "0.2.10"
+tower = "0.4.13"
+serve_embed = "0.1.0"
