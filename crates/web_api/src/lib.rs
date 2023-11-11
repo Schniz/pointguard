@@ -1,3 +1,8 @@
+mod admin;
+
+use std::path::{Path, PathBuf};
+
+use admin::{admin_routes, attach_views_reloader};
 use aide::{
     axum::{
         routing::{get, post},
@@ -8,6 +13,7 @@ use aide::{
 };
 use axum::{extract::State, Extension, Json};
 use db::postgres::PgPool;
+use notify::FsEventWatcher;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,7 +23,7 @@ fn generate_nanoid() -> String {
 }
 
 #[derive(Clone)]
-struct AppState {
+pub(crate) struct AppState {
     db: db::postgres::PgPool,
 }
 
@@ -80,9 +86,10 @@ impl Server {
             ..OpenApi::default()
         };
 
-        let app = ApiRouter::new()
+        let mut app = ApiRouter::new()
             .route("/api", Redoc::new("/api/openapi.json").axum_route())
             .route("/api/openapi.json", get(serve_api))
+            .nest("/", admin_routes())
             .api_route_with("/api/v1/version", get(stub), |r| {
                 r.description("hello").summary("what?")
             })
@@ -92,6 +99,15 @@ impl Server {
             .with_state(AppState { db: self.pool })
             .finish_api_with(&mut api, |api| api.default_response::<String>())
             .layer(Extension(api));
+
+        #[cfg(debug_assertions)]
+        {
+            let reloader = tower_livereload::LiveReloadLayer::new();
+            let views = attach_views_reloader(reloader.reloader());
+            app = app
+                .layer(reloader)
+                .layer(axum::Extension(std::sync::Arc::new(views)));
+        };
 
         let host = self.host;
         let port = self.port;
