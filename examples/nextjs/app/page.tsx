@@ -7,7 +7,7 @@ export default function Home() {
         action={async (formData: FormData) => {
           "use server";
 
-          await SayHello.send({
+          await SayHello.enqueue({
             name: formData.get("name") as string,
           });
         }}

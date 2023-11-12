@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "build": "turbo run build"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

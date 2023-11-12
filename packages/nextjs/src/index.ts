@@ -14,7 +14,7 @@ const encodeEnqueueOptions = Schema.encodeSync(EnqueueOptions);
 interface Job<Input> {
   name: string;
 
-  send(
+  enqueue(
     input: Input,
     opts?: Schema.Schema.To<typeof EnqueueOptions>
   ): Promise<void>;
@@ -50,7 +50,7 @@ export function defineJob<Input>(options: {
   return {
     handler: options.handler,
     name: options.name,
-    send: async (input, opts) => {
+    async enqueue(input, opts) {
       const jobOptions = encodeEnqueueOptions(opts ?? {});
       const body = JSON.stringify({
         data: input,
