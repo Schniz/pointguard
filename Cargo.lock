@@ -1131,6 +1131,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "notify-debouncer-mini"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d40b221972a1fc5ef4d858a2f671fb34c75983eb385463dff3780eeff6a9d43"
+dependencies = [
+ "crossbeam-channel",
+ "log",
+ "notify",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1414,6 +1425,7 @@ dependencies = [
  "http",
  "nanoid",
  "notify",
+ "notify-debouncer-mini",
  "pointguard_dependencies",
  "pointguard_engine_postgres",
  "rust-embed",
