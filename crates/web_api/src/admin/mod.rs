@@ -5,6 +5,7 @@ mod views;
 use crate::{events::EnqueuedTasks, AppState};
 use aide::axum::ApiRouter;
 use axum::{
+    extract::State,
     response::{
         sse::{Event, KeepAlive},
         Html, IntoResponse, Sse,
@@ -14,6 +15,7 @@ use axum::{
 };
 use futures::StreamExt;
 use handlebars::Handlebars;
+use pointguard_engine_postgres as db;
 use std::{
     convert::Infallible,
     path::{Path, PathBuf},
@@ -49,9 +51,16 @@ async fn dashboard_events(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
-async fn index(Extension(handlebars): Extension<Handlebars<'_>>) -> impl IntoResponse {
+async fn index(
+    State(state): State<AppState>,
+    Extension(handlebars): Extension<Handlebars<'_>>,
+) -> impl IntoResponse {
+    let finished_tasks = db::finished_tasks(&state.db).await.expect("finished tasks");
     let body = handlebars
-        .render("index", &serde_json::json!({ "title": "hi!" }))
+        .render(
+            "index",
+            &serde_json::json!({ "title": "Home", "tasks": finished_tasks }),
+        )
         .expect("render index");
     Html(body)
 }

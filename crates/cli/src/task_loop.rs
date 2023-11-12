@@ -32,7 +32,7 @@ async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool)
         }
         Err(err) => {
             tracing::error!("invocation failed: {err}");
-            task.failed(&db).await;
+            task.failed(&db, &err.to_string()).await;
         }
     }
 }

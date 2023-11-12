@@ -5,6 +5,28 @@ use handlebars::Handlebars;
 
 pub(crate) fn load(handlebars: &mut Handlebars) {
     file_hash_helper::register(handlebars);
+    handlebars.register_helper(
+        "stringify_json",
+        Box::new(
+            |h: &handlebars::Helper,
+             _r: &Handlebars,
+             _: &handlebars::Context,
+             _rc: &mut handlebars::RenderContext,
+             out: &mut dyn handlebars::Output|
+             -> handlebars::HelperResult {
+                let value = h.param(0).unwrap();
+                let pretty = h.param(1);
+                let value = match pretty.map(|x| x.value()) {
+                    Some(serde_json::Value::Bool(false)) => {
+                        serde_json::to_string(value.value()).unwrap()
+                    }
+                    _ => serde_json::to_string_pretty(value.value()).unwrap(),
+                };
+                out.write(&value).unwrap();
+                Ok(())
+            },
+        ),
+    );
     load_specific(handlebars);
 }
 
