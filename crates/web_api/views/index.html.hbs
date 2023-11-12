@@ -13,35 +13,33 @@
     {{! </div> }}
   </div>
   <div class="mt-8 flow-root">
-    <div class="-mx-4 -my-2 max-w-[calc(100vw-4rem)]  overflow-x-auto sm:-mx-6 lg:-mx-8">
+    <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
       <div class="inline-block max-w-full py-2 align-middle sm:px-6 lg:px-8">
         <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
           <table class="max-w-full divide-y divide-gray-300">
             <thead class="bg-gray-50">
               <tr>
-                <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Title</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
-                <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                  <span class="sr-only">Edit</span>
-                </th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Endpoint</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Job</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Data</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Retries</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Error message</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
               {{#each tasks}}
               <tr class="even:bg-orange-50">
-                <td
-                 {{#if error_message}}data-error{{/if}}
-                  class="
-                    whitespace-nowrap py-4 pl-4 pr-3 text-sm
-                    data-[error]:text-red-600 font-medium text-green-600 sm:pl-6
-                  "
-                >{{#if error_message}}ERROR{{else}}SUCCESS{{/if}}</td>
                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-400 hover:text-gray-500">{{endpoint}}
                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{job_name}}</td>
                 <td class="px-3 py-4 text-sm text-gray-500 break-all whitespace-break-spaces"><pre>{{stringify_json data false}}</pre></td>
-                <td class="px-3 py-4 text-gray-500 font-mono text-xs break-all whitespace-break-spaces">{{error_message}}</td>
+                <td class="px-3 py-4 text-gray-500 font-mono text-xs break-all whitespace-break-spaces">{{#if retries}}{{retries}}{{/if}}</td>
+                <td class="px-3 py-4 font-mono text-xs break-all">
+                {{#if error_message}}
+                <span class="text-red-600">{{error_message}}</span>
+                {{else}}
+                <pre class="text-green-600">OK</pre>
+                {{/if}}
+                </td>
               </tr>
               {{/each}}
             </tbody>

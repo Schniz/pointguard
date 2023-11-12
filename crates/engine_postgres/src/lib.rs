@@ -17,6 +17,7 @@ pub struct FinishedTask {
     pub error_message: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub data: serde_json::Value,
+    pub retries: i32,
 }
 
 pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Error> {
@@ -30,7 +31,8 @@ pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Erro
             endpoint,
             error_message,
             created_at,
-            data
+            data,
+            retries
         FROM
             finished_tasks
         ORDER BY
