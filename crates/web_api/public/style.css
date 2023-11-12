@@ -831,6 +831,10 @@ video {
   background-color: rgb(255 247 237 / var(--tw-bg-opacity));
 }
 
+.even\:bg-opacity-50:nth-child(even) {
+  --tw-bg-opacity: 0.5;
+}
+
 .hover\:bg-indigo-500:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(99 102 241 / var(--tw-bg-opacity));
