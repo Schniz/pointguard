@@ -2,16 +2,22 @@ mod file_hash_helper;
 mod public;
 mod views;
 
-use crate::AppState;
+use crate::{events::EnqueuedTasks, AppState};
 use aide::axum::ApiRouter;
 use axum::{
-    response::{Html, IntoResponse},
+    response::{
+        sse::{Event, KeepAlive},
+        Html, IntoResponse, Sse,
+    },
     routing::get,
     Extension,
 };
+use futures::StreamExt;
 use handlebars::Handlebars;
 use std::{
+    convert::Infallible,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -27,8 +33,20 @@ pub(crate) fn admin_routes() -> ApiRouter<AppState> {
     tracing::debug!("loaded templates: {:?}", templates);
     ApiRouter::new()
         .route("/", get(index))
+        .route("/admin/events", get(dashboard_events))
         .layer(Extension(handlebars))
         .nest_service("/assets/", public::serve())
+}
+
+async fn dashboard_events(
+    Extension(enqueued_tasks): Extension<Arc<EnqueuedTasks>>,
+) -> impl IntoResponse {
+    let stream = enqueued_tasks
+        .rx
+        .clone()
+        .into_stream()
+        .map(|_| Ok::<_, Infallible>(Event::default().data("hi").event("enqueued")));
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
 async fn index(Extension(handlebars): Extension<Handlebars<'_>>) -> impl IntoResponse {

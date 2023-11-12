@@ -1,6 +1,7 @@
 {{#*inline "body"}}
 
-Hello world :D 
+<div hx-ext="sse" sse-connect="/admin/events" sse-swap="enqueued">
+</div>
 
 {{/inline}}
 {{>layout}}

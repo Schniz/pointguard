@@ -1,4 +1,7 @@
 mod admin;
+mod events;
+
+use std::sync::Arc;
 
 use admin::{admin_routes, attach_views_reloader};
 use aide::{
@@ -11,6 +14,7 @@ use aide::{
 };
 use axum::{extract::State, Extension, Json};
 use db::postgres::PgPool;
+use events::EnqueuedTasks;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -48,6 +52,7 @@ struct NewTaskBody {
 
 #[tracing::instrument(skip_all, fields(%new_task.job_name))]
 async fn post_tasks(
+    Extension(enqueue_tasks): Extension<Arc<EnqueuedTasks>>,
     State(state): State<AppState>,
     Json(new_task): Json<NewTaskBody>,
 ) -> impl IntoApiResponse {
@@ -63,6 +68,13 @@ async fn post_tasks(
     )
     .await
     .expect("enqueue task");
+
+    enqueue_tasks
+        .tx
+        .send_async(1usize)
+        .await
+        .expect("send task");
+
     Json(id)
 }
 
@@ -83,6 +95,8 @@ impl Server {
             ..OpenApi::default()
         };
 
+        let enqueue_tasks = EnqueuedTasks::from(flume::unbounded());
+
         let mut app = ApiRouter::new()
             .route("/api", Redoc::new("/api/openapi.json").axum_route())
             .route("/api/openapi.json", get(serve_api))
@@ -95,7 +109,8 @@ impl Server {
             })
             .with_state(AppState { db: self.pool })
             .finish_api_with(&mut api, |api| api.default_response::<String>())
-            .layer(Extension(api));
+            .layer(Extension(api))
+            .layer(Extension(Arc::new(enqueue_tasks)));
 
         #[cfg(debug_assertions)]
         {
