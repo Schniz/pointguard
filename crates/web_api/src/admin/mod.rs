@@ -1,3 +1,4 @@
+mod file_hash_helper;
 mod public;
 mod views;
 

@@ -32,7 +32,7 @@ pub(crate) mod release {
 
     #[derive(RustEmbed)]
     #[folder = "public"]
-    struct Public;
+    pub struct Public;
 
     #[derive(Clone)]
     pub(crate) struct ServePublic;

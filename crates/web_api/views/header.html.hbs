@@ -1,19 +1,18 @@
-<nav class="flex items-center justify-center relative">
+{{#*inline "navlink"}}
+  <a class="py-2 px-4 block hover:bg-gray-300 data-[active]:font-bold hover:underline" href="{{href}}" :data-active="url.pathname === '{{href}}'">
+    {{text}}
+  </a>
+{{/inline}}
+
+<nav class="flex items-center justify-center relative" x-data="{ url: new URL(window.location.href) }">
   <span
-    class="pointer-events-none font-medium text-sm absolute left-2 top-1/2 -translate-y-1/2 opacity-75"
+    class="pointer-events-none text-sm absolute left-2 top-1/2 -translate-y-1/2 opacity-75"
   >
-    🏀 Pointguard
+    🏀
+    <span class="font-bold">Pointguard</span>
   </span>
-  <a class="py-2 px-4 block hover:bg-gray-300" href="/">
-    Home
-  </a>
-  <a class="py-2 px-4 block hover:bg-gray-300" href="/ongoing">
-    Ongoing
-  </a>
-  <a class="py-2 px-4 block hover:bg-gray-300" href="/retries">
-    Retries
-  </a>
-  <a class="py-2 px-4 block hover:bg-gray-300" href="/failed">
-    Failed
-  </a>
+  {{> navlink href="/" text="Home"}}
+  {{> navlink href="/ongoing" text="Ongoing"}}
+  {{> navlink href="/retries" text="Retries"}}
+  {{> navlink href="/failed" text="Failed"}}
 </nav>

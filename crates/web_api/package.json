@@ -8,7 +8,7 @@
     "dev:tailwindcss": "tailwindcss -i views/style.css -o public/style.css --watch",
     "build": "pnpm run '/(build:.*)/'",
     "build:tailwindcss": "tailwindcss -i views/style.css -o public/style.css --minify",
-    "build:cp:alpinejs": "cp node_modules/alpinejs/dist/module.esm.js public/alpine.mjs",
+    "build:cp:alpinejs": "cp node_modules/alpinejs/dist/cdn.min.js public/alpine.js",
     "build:cp:htmx": "cp node_modules/htmx.org/dist/htmx.min.js public/htmx.js"
   },
   "keywords": [],

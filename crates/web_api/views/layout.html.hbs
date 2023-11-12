@@ -1,10 +1,11 @@
 <html>
   <head>
     <title>{{title}}</title>
-    <link rel="stylesheet" href="/assets/style.css" />
+    <link rel="stylesheet" href="/assets/style.css?v={{ file_hash "style.css" }}" />
   </head>
   <body class="bg-gray-200">
     {{> header}}
     {{> body}}
+    <script src="/assets/alpine.js?v={{ file_hash "alpine.js" }}"></script>
   </body>
 </html>

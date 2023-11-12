@@ -1,9 +1,15 @@
 use std::path::{Path, PathBuf};
 
+use crate::admin::file_hash_helper;
 use handlebars::Handlebars;
 
-#[cfg(debug_assertions)]
 pub(crate) fn load(handlebars: &mut Handlebars) {
+    file_hash_helper::register(handlebars);
+    load_specific(handlebars);
+}
+
+#[cfg(debug_assertions)]
+fn load_specific(handlebars: &mut Handlebars) {
     let views = PathBuf::from(file!())
         .parent()
         .and_then(Path::parent)
@@ -17,7 +23,7 @@ pub(crate) fn load(handlebars: &mut Handlebars) {
 }
 
 #[cfg(not(debug_assertions))]
-pub(crate) fn load(handlebars: &mut Handlebars) {
+fn load_specific(handlebars: &mut Handlebars) {
     #[derive(rust_embed::RustEmbed)]
     #[folder = "views"]
     struct Views;

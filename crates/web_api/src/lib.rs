@@ -1,7 +1,5 @@
 mod admin;
 
-use std::path::{Path, PathBuf};
-
 use admin::{admin_routes, attach_views_reloader};
 use aide::{
     axum::{
@@ -13,7 +11,6 @@ use aide::{
 };
 use axum::{extract::State, Extension, Json};
 use db::postgres::PgPool;
-use notify::FsEventWatcher;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
