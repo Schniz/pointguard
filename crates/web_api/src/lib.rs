@@ -48,6 +48,8 @@ struct NewTaskBody {
     /// When to run the task. If not provided, it'll run as soon as possible.
     #[serde(skip_serializing_if = "Option::is_none")]
     run_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_retries: Option<usize>,
 }
 
 #[tracing::instrument(skip_all, fields(%new_task.job_name))]
@@ -60,6 +62,7 @@ async fn post_tasks(
         &state.db,
         &db::NewTask {
             job_name: new_task.job_name,
+            max_retries: new_task.max_retries.map(|x| x as i32),
             data: new_task.data.unwrap_or_default(),
             endpoint: new_task.endpoint.to_string(),
             name: new_task.name.unwrap_or_else(generate_nanoid),

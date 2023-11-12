@@ -8,6 +8,9 @@ pub struct InflightTask {
     pub endpoint: String,
     pub name: String,
 
+    pub max_retries: i32,
+    pub retry_count: i32,
+
     cleaned_up: bool,
 }
 
@@ -23,31 +26,62 @@ impl InflightTask {
         }
 
         // TODO: maybe we should have a global error handler that will retry?
-
         self.cleaned_up = true;
     }
 
-    pub async fn release(self, conn: &sqlx::PgPool) {
-        self.done(conn).await
-        // TODO: actually release, but we need to manage retries..
-        // sqlx::query!(
-        //     "
-        //     UPDATE
-        //         tasks
-        //     SET
-        //         worker_id = NULL,
-        //         started_at = NULL,
-        //         run_at = now() + INTERVAL '1 minute',
-        //         updated_at = now()
-        //     WHERE
-        //         id = $1
-        //     ",
-        //     self.id,
-        // )
-        // .execute(conn)
-        // .await
-        // .unwrap();
-        // self.cleaned_up = true;
+    pub async fn failed(mut self, conn: &sqlx::PgPool) {
+        if self.max_retries == self.retry_count {
+            tracing::error!(
+                "task {} failed {} times, giving up",
+                self.id,
+                self.retry_count + 1
+            );
+            let mut tx = conn.begin().await.expect("failed to start transaction");
+            sqlx::query!(
+                "
+                INSERT INTO failed_tasks
+                (job_name, data, endpoint, name, retries, started_at, task_created_at)
+                SELECT job_name, data, endpoint, name, retry_count, started_at, created_at
+                FROM tasks WHERE id = $1
+                ",
+                self.id
+            )
+            .execute(&mut *tx)
+            .await
+            .expect("failed to insert failed task");
+            sqlx::query!(
+                "
+                DELETE FROM tasks
+                WHERE id = $1
+                ",
+                self.id
+            )
+            .execute(&mut *tx)
+            .await
+            .expect("failed to delete task");
+            tx.commit().await.expect("failed to commit transaction");
+        } else {
+            sqlx::query!(
+                "
+                UPDATE
+                    tasks
+                SET
+                    worker_id = NULL,
+                    started_at = NULL,
+                    run_at = now() + retry_delay,
+                    updated_at = now(),
+                    retry_count = retry_count + 1
+                WHERE
+                    id = $1
+            ",
+                self.id,
+            )
+            .execute(conn)
+            .await
+            .expect("failed to update task");
+        }
+
+        self.cleaned_up = true;
     }
 }
 
@@ -96,7 +130,8 @@ pub async fn free_tasks(db: &sqlx::PgPool, count: i64) -> Result<Vec<InflightTas
             FROM pg_stat_activity
             WHERE application_name LIKE 'pointguard:%'
         )
-        SELECT id, job_name, data, endpoint, name, false as \"cleaned_up!\" FROM tasks
+        SELECT id, job_name, data, endpoint, name, false as \"cleaned_up!\", max_retries, retry_count
+        FROM tasks
         LEFT JOIN running_workers ON tasks.worker_id = running_workers.application_name
         WHERE running_workers.application_name IS NULL
           AND run_at <= NOW()
@@ -140,20 +175,22 @@ pub struct NewTask {
     pub endpoint: String,
     pub name: String,
     pub run_at: Option<chrono::DateTime<chrono::Utc>>,
+
+    pub max_retries: Option<i32>,
 }
 
 pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Error> {
     let id = sqlx::query!(
         "
-        INSERT INTO tasks (job_name, data, endpoint, name, run_at)
-        VALUES ($1, $2, $3, $4, COALESCE($5, now()))
+        INSERT INTO tasks (job_name, data, endpoint, name, run_at, max_retries)
+        VALUES ($1, $2, $3, $4, COALESCE($5, now()), $6)
         ON CONFLICT (job_name, name, endpoint) DO UPDATE
         SET
             updated_at = now()
         RETURNING
             id,
             CASE WHEN run_at <= NOW()
-                THEN pg_notify($6, json_build_object('run_at', run_at, 'id', id)::text)
+                THEN pg_notify($7, json_build_object('run_at', run_at, 'id', id)::text)
                 ELSE null
             END AS \"notify\"
         ",
@@ -162,6 +199,7 @@ pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Err
         task.endpoint,
         task.name,
         task.run_at,
+        task.max_retries.unwrap_or(0) as i64,
         constants::NEW_TASK_QUEUE,
     )
     .fetch_one(db)
