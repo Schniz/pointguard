@@ -126,17 +126,12 @@ pub async fn free_tasks(db: &sqlx::PgPool, count: i64) -> Result<Vec<InflightTas
     let inflight_tasks = sqlx::query_as!(
         InflightTask,
         "
-        WITH running_workers AS (
-            SELECT DISTINCT application_name
-            FROM pg_stat_activity
-            WHERE application_name LIKE 'pointguard:%'
-        )
         SELECT id, created_at, job_name, data, endpoint, name, false as \"cleaned_up!\", max_retries, retry_count
         FROM tasks
         LEFT JOIN running_workers ON tasks.worker_id = running_workers.application_name
         WHERE running_workers.application_name IS NULL
           AND run_at <= NOW()
-        FOR UPDATE
+        FOR UPDATE of tasks
         SKIP LOCKED
         LIMIT $1
         ",
@@ -167,6 +162,46 @@ pub async fn free_tasks(db: &sqlx::PgPool, count: i64) -> Result<Vec<InflightTas
     tx.commit().await?;
 
     Ok(inflight_tasks)
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OngoingTask {
+    pub id: i64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub job_name: String,
+    pub data: serde_json::Value,
+    pub endpoint: String,
+    pub name: String,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub worker_id: String,
+
+    pub max_retries: i32,
+    pub retry_count: i32,
+}
+
+pub async fn ongoing_tasks(db: &sqlx::PgPool) -> Result<Vec<OngoingTask>, sqlx::Error> {
+    let tasks = sqlx::query_as!(
+        OngoingTask,
+        "
+        SELECT
+            id,
+            created_at,
+            job_name,
+            data,
+            endpoint,
+            name,
+            \"started_at\" as \"started_at!\",
+            max_retries,
+            retry_count,
+            worker_id as \"worker_id!\"
+        FROM tasks
+        JOIN running_workers ON tasks.worker_id = running_workers.application_name
+        "
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(tasks)
 }
 
 #[derive(Debug)]
