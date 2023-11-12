@@ -7,6 +7,7 @@ pub struct InflightTask {
     pub data: serde_json::Value,
     pub endpoint: String,
     pub name: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 
     pub max_retries: i32,
     pub retry_count: i32,
@@ -130,7 +131,7 @@ pub async fn free_tasks(db: &sqlx::PgPool, count: i64) -> Result<Vec<InflightTas
             FROM pg_stat_activity
             WHERE application_name LIKE 'pointguard:%'
         )
-        SELECT id, job_name, data, endpoint, name, false as \"cleaned_up!\", max_retries, retry_count
+        SELECT id, created_at, job_name, data, endpoint, name, false as \"cleaned_up!\", max_retries, retry_count
         FROM tasks
         LEFT JOIN running_workers ON tasks.worker_id = running_workers.application_name
         WHERE running_workers.application_name IS NULL
@@ -204,6 +205,7 @@ pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Err
     )
     .fetch_one(db)
     .await?;
+    tracing::info!("enqueued task {:?}", id);
     Ok(id.id)
 }
 

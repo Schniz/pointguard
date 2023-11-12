@@ -1394,10 +1394,13 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 name = "pointguard_cli"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "colored",
  "pointguard_engine_postgres",
  "pointguard_web_api",
  "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

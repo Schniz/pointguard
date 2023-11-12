@@ -72,6 +72,8 @@ async fn post_tasks(
     .await
     .expect("enqueue task");
 
+    tracing::info!("enqueued");
+
     enqueue_tasks
         .tx
         .send_async(1usize)

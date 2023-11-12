@@ -1,10 +1,26 @@
 use pointguard_engine_postgres::{self as db, postgres::PgPool};
 
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InvokedTask<'a> {
+    job_name: &'a str,
+    input: &'a serde_json::Value,
+    retry_count: i32,
+    max_retries: i32,
+    created_at: &'a chrono::DateTime<chrono::Utc>,
+}
+
 #[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
 async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
     let response = http
         .post(&task.endpoint)
-        .json(&task.data)
+        .json(&InvokedTask {
+            job_name: &task.job_name[..],
+            input: &task.data,
+            retry_count: task.retry_count,
+            max_retries: task.max_retries,
+            created_at: &task.created_at,
+        })
         .send()
         .await
         .and_then(|res| res.error_for_status());

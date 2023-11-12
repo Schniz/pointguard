@@ -16,3 +16,6 @@ reqwest = { version = "0.11.22", features = [
   "rustls",
   "json",
 ], default-features = false }
+serde = { version = "1.0.192", features = ["derive"] }
+chrono = { version = "0.4.31", features = ["serde"] }
+serde_json = "1.0.108"

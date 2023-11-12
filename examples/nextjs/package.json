@@ -1,0 +1,23 @@
+{
+  "name": "@pointguard/examples-nextjs",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev --port=8081"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pointguard/nextjs": "workspace:^",
+    "next": "^14.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "@types/react": "18.2.37"
+  }
+}
