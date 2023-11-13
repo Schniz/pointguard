@@ -13,7 +13,7 @@ const router = createBrowserRouter(
       children: [
         {
           path: "/enqueued",
-          element: <div>Enqueued</div>,
+          lazy: () => import("./pages/enqueued"),
         },
         {
           path: "/finished",

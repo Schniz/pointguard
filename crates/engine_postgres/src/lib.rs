@@ -20,7 +20,8 @@ pub struct FinishedTask {
     pub retries: i32,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct EnqueuedTask {
     pub id: i64,
     pub job_name: String,
@@ -28,7 +29,7 @@ pub struct EnqueuedTask {
     pub endpoint: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub data: serde_json::Value,
-    pub run_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub run_at: chrono::DateTime<chrono::Utc>,
     pub retry_count: i32,
     pub max_retries: i32,
     pub worker_id: Option<String>,

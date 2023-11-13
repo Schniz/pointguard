@@ -31,7 +31,13 @@ impl<ReqBody> Service<http::Request<ReqBody>> for ServePublic {
     fn call(&mut self, req: http::Request<ReqBody>) -> Self::Future {
         let pathname = req.uri().path();
         let pathname = pathname.strip_prefix("/").unwrap_or(pathname);
-        let data = Public::get(pathname);
+        let mut data = Public::get(pathname);
+
+        if let None = data {
+            if !pathname.starts_with("assets/") {
+                data = Public::get("index.html");
+            }
+        }
 
         let resp = match data {
             None => http::status::StatusCode::NOT_FOUND.into_response(),

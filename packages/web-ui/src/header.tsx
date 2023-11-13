@@ -21,8 +21,8 @@ export function Header() {
       className="flex items-center justify-center relative"
       x-data="{ url: new URL(window.location.href) }"
     >
-      <span className="pointer-events-none text-sm absolute left-2 top-1/2 -translate-y-1/2 opacity-75">
-        🏀
+      <span className="pointer-events-none text-sm absolute left-2 top-1/2 -translate-y-1/2 opacity-75 space-x-1">
+        <span>🏀</span>
         <span className="font-bold">Pointguard</span>
       </span>
       <NavLink to="/enqueued">Enqueued</NavLink>

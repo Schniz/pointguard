@@ -6,13 +6,13 @@ use std::sync::Arc;
 use admin::{admin_routes, attach_views_reloader};
 use aide::{
     axum::{
-        routing::{get, post},
+        routing::{get, get_with, post, post_with},
         ApiRouter, IntoApiResponse,
     },
     openapi::{Info, OpenApi},
     redoc::Redoc,
 };
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, response::Redirect, Extension, Json};
 use db::postgres::PgPool;
 use events::EnqueuedTasks;
 use pointguard_engine_postgres as db;
@@ -106,12 +106,16 @@ impl Server {
             .route("/api", Redoc::new("/api/openapi.json").axum_route())
             .route("/api/openapi.json", get(serve_api))
             .nest("/", admin_routes())
-            .api_route_with("/api/v1/version", get(stub), |r| {
-                r.description("hello").summary("what?")
-            })
-            .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
-                r.description("hello").summary("what?")
-            })
+            .api_route(
+                "/api/v1/version",
+                get_with(stub, |r| r.description("get the version")),
+            )
+            .api_route(
+                "/api/v1/tasks",
+                post_with(post_tasks, |r| r.description("create a task")),
+            )
+            .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
+            .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
             .with_state(AppState { db: self.pool })
             .finish_api_with(&mut api, |api| api.default_response::<String>())
             .layer(Extension(api))
@@ -146,4 +150,24 @@ impl Server {
 
 async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
     Json(api)
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+struct CancelTaskParams {
+    id: i64,
+}
+
+async fn cancel_task(
+    State(state): State<AppState>,
+    axum::extract::Path(path): axum::extract::Path<CancelTaskParams>,
+) -> impl IntoApiResponse {
+    let _task = db::cancel_task(&state.db, path.id)
+        .await
+        .expect("cancel task");
+    Redirect::to("/api/v1/tasks/enqueued")
+}
+
+async fn get_enqueued_tasks(State(state): State<AppState>) -> impl IntoApiResponse {
+    let enqueued_tasks = db::enqueued_tasks(&state.db).await.expect("enqueued tasks");
+    Json(enqueued_tasks)
 }
