@@ -20,6 +20,74 @@ pub struct FinishedTask {
     pub retries: i32,
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct EnqueuedTask {
+    pub id: i64,
+    pub job_name: String,
+    pub name: String,
+    pub endpoint: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub data: serde_json::Value,
+    pub run_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub retry_count: i32,
+    pub max_retries: i32,
+    pub worker_id: Option<String>,
+}
+
+pub async fn cancel_task(db: &PgPool, id: i64) -> Result<Option<i64>, sqlx::Error> {
+    let task = sqlx::query!(
+        "
+        DELETE FROM
+            tasks
+        WHERE
+            id = $1
+            AND (
+                worker_id IS NULL
+                OR worker_id NOT IN (
+                    SELECT
+                        application_name
+                    FROM
+                        running_workers
+                )
+            )
+        RETURNING
+            id
+        ",
+        id
+    )
+    .fetch_optional(db)
+    .await?;
+
+    Ok(task.map(|t| t.id))
+}
+
+pub async fn enqueued_tasks(db: &PgPool) -> Result<Vec<EnqueuedTask>, sqlx::Error> {
+    sqlx::query_as!(
+        EnqueuedTask,
+        "
+        SELECT
+            id,
+            job_name,
+            name,
+            endpoint,
+            created_at,
+            data,
+            run_at,
+            retry_count,
+            max_retries,
+            worker_id
+        FROM
+            tasks
+        LEFT OUTER JOIN
+            running_workers ON tasks.worker_id = running_workers.application_name
+        ORDER BY
+            run_at ASC
+        "
+    )
+    .fetch_all(db)
+    .await
+}
+
 pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Error> {
     sqlx::query_as!(
         FinishedTask,

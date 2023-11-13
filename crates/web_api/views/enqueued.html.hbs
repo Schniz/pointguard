@@ -1,0 +1,10 @@
+{{#*inline "body"}}
+
+<div id="enqueued-table" class="divide-y divide-gray-200 bg-white" hx-get="/enqueued" hx-trigger="every 10s, focus from:window throttle:100ms">
+  {{#each tasks}}
+    {{> enqueued-task-row this}}
+  {{/each}}
+</div>
+
+{{/inline}}
+{{>layout}}

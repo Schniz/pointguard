@@ -18,6 +18,9 @@ importers:
         specifier: ^1.9.8
         version: 1.9.8
     devDependencies:
+      '@marcreichel/alpine-timeago':
+        specifier: ^1.4.3
+        version: 1.4.3
       alpinejs:
         specifier: ^3.13.2
         version: 3.13.2
@@ -67,6 +70,13 @@ packages:
   /@alloc/quick-lru@5.2.0:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+    dev: true
+
+  /@babel/runtime@7.23.2:
+    resolution: {integrity: sha512-mM8eg4yl5D6i3lu2QKPuPH4FArvJ8KhTofbE7jwMUv9KX5mBvwPAqnV3MlyBNqdp9RyRKP6Yck8TrfYrPvX3bg==}
+    engines: {node: '>=6.9.0'}
+    dependencies:
+      regenerator-runtime: 0.14.0
     dev: true
 
   /@effect/schema@0.47.6(effect@2.0.0-next.54)(fast-check@3.13.2):
@@ -305,6 +315,12 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
+    dev: true
+
+  /@marcreichel/alpine-timeago@1.4.3:
+    resolution: {integrity: sha512-bA7pij03F1HIb5P2eRbCh4JckkXW48g+KahmWWFP5CiXGr+1RejBH7A7ErCj9Glp3MMrqKw9wE+62pw24gCaDA==}
+    dependencies:
+      date-fns: 2.30.0
     dev: true
 
   /@next/env@14.0.2:
@@ -577,6 +593,13 @@ packages:
 
   /csstype@3.1.2:
     resolution: {integrity: sha512-I7K1Uu0MBPzaFKg4nI5Q7Vs2t+3gWWW648spaF+Rg7pI9ds18Ugn+lvg4SHczUdKlHI5LWBXyqfS8+DufyBsgQ==}
+    dev: true
+
+  /date-fns@2.30.0:
+    resolution: {integrity: sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw==}
+    engines: {node: '>=0.11'}
+    dependencies:
+      '@babel/runtime': 7.23.2
     dev: true
 
   /debug@4.3.4:
@@ -1128,6 +1151,10 @@ packages:
     engines: {node: '>=8.10.0'}
     dependencies:
       picomatch: 2.3.1
+    dev: true
+
+  /regenerator-runtime@0.14.0:
+    resolution: {integrity: sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA==}
     dev: true
 
   /resolve-from@5.0.0:

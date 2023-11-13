@@ -119,7 +119,16 @@ impl Server {
 
         #[cfg(debug_assertions)]
         {
-            let reloader = tower_livereload::LiveReloadLayer::new();
+            let reloader = tower_livereload::LiveReloadLayer::new().request_predicate(
+                |t: &http::Request<_>| match (
+                    t.headers().get("accept").and_then(|x| x.to_str().ok()),
+                    t.headers().get("hx-request"),
+                ) {
+                    (_, Some(_)) => false,
+                    (Some(x), _) if x.starts_with("text/html") => true,
+                    _ => false,
+                },
+            );
             let views = attach_views_reloader(reloader.reloader());
             app = app
                 .layer(reloader)
