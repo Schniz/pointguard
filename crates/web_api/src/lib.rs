@@ -3,10 +3,10 @@ mod events;
 
 use std::sync::Arc;
 
-use admin::{admin_routes, attach_views_reloader};
+use admin::admin_routes;
 use aide::{
     axum::{
-        routing::{get, get_with, post, post_with},
+        routing::{get, post},
         ApiRouter, IntoApiResponse,
     },
     openapi::{Info, OpenApi},
@@ -118,20 +118,8 @@ impl Server {
 
         #[cfg(debug_assertions)]
         {
-            let reloader = tower_livereload::LiveReloadLayer::new().request_predicate(
-                |t: &http::Request<_>| match (
-                    t.headers().get("accept").and_then(|x| x.to_str().ok()),
-                    t.headers().get("hx-request"),
-                ) {
-                    (_, Some(_)) => false,
-                    (Some(x), _) if x.starts_with("text/html") => true,
-                    _ => false,
-                },
-            );
-            let views = attach_views_reloader(reloader.reloader());
-            app = app
-                .layer(reloader)
-                .layer(axum::Extension(std::sync::Arc::new(views)));
+            let reloader = tower_livereload::LiveReloadLayer::new();
+            app = app.layer(reloader);
         };
 
         let host = self.host;
