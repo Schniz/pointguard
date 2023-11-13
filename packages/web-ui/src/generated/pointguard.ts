@@ -6,9 +6,14 @@
 
 export interface paths {
   "/api/v1/version": {
-    /** @description get the version */
     get: {
       responses: {
+        /** @description plain text */
+        200: {
+          content: {
+            "text/plain; charset=utf-8": unknown;
+          };
+        };
         /** @description plain text */
         default: {
           content: {
@@ -19,7 +24,6 @@ export interface paths {
     };
   };
   "/api/v1/tasks": {
-    /** @description create a task */
     post: {
       requestBody: {
         content: {
@@ -46,6 +50,11 @@ export interface paths {
         };
       };
       responses: {
+        200: {
+          content: {
+            "application/json": number;
+          };
+        };
         /** @description plain text */
         default: {
           content: {
@@ -93,6 +102,37 @@ export interface paths {
                 /** Format: date-time */
                 runAt: string;
                 workerId?: string | null;
+              })[];
+          };
+        };
+        /** @description plain text */
+        default: {
+          content: {
+            "text/plain; charset=utf-8": unknown;
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/tasks/finished": {
+    get: {
+      responses: {
+        200: {
+          content: {
+            "application/json": ({
+                /** Format: date-time */
+                createdAt: string;
+                data: unknown;
+                endpoint: string;
+                errorMessage?: string | null;
+                /** Format: int64 */
+                id: number;
+                jobName: string;
+                name: string;
+                /** Format: int32 */
+                retries: number;
+                /** Format: date-time */
+                startedAt: string;
               })[];
           };
         };

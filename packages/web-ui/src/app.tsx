@@ -17,7 +17,7 @@ const router = createBrowserRouter(
         },
         {
           path: "/finished",
-          element: <div>Finished</div>,
+          lazy: () => import("./pages/finished"),
         },
         {
           path: "/",

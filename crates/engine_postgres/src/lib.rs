@@ -8,7 +8,8 @@ use sqlx::PgPool;
 use std::str::FromStr;
 pub use task_listener::{NewTaskPayload, TaskListener};
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct FinishedTask {
     pub id: i64,
     pub job_name: String,
@@ -16,6 +17,7 @@ pub struct FinishedTask {
     pub endpoint: String,
     pub error_message: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    pub started_at: chrono::DateTime<chrono::Utc>,
     pub data: serde_json::Value,
     pub retries: i32,
 }
@@ -98,6 +100,7 @@ pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Erro
             job_name,
             name,
             endpoint,
+            started_at,
             error_message,
             created_at,
             data,

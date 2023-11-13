@@ -1,32 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { apiClient } from "../api-client";
-import { useLoaderData, useLocation, useNavigate } from "react-router-dom";
 import formatRelative from "date-fns/formatRelative";
-
-function useSWR<T>(): [T, refetch: () => void] {
-  const data = useLoaderData() as T;
-  const l = useLocation();
-  const navigate = useNavigate();
-
-  const callback = useCallback(() => navigate(location.current), [navigate]);
-
-  const location = useRef(l);
-  useEffect(() => {
-    location.current = l;
-  }, [l]);
-
-  useEffect(() => {
-    const interval = setInterval(callback, 5000);
-    window.addEventListener("focus", callback);
-
-    return () => {
-      window.removeEventListener("focus", callback);
-      clearInterval(interval);
-    };
-  }, [navigate, callback]);
-
-  return [data, callback];
-}
+import { useSWR } from "../swr";
 
 type LoaderData = Awaited<ReturnType<typeof loader>>;
 
