@@ -40,7 +40,7 @@ pub(crate) fn admin_routes() -> ApiRouter<AppState> {
         .route("/admin/events", get(dashboard_events))
         .route("/admin/tasks/:id/cancel", post(cancel_task))
         .layer(Extension(handlebars))
-        .nest_service("/assets/", public::serve())
+        .nest_service("/admin/", public::serve())
 }
 
 async fn cancel_task(
