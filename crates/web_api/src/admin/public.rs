@@ -1,75 +1,55 @@
-#[cfg(debug_assertions)]
-pub(crate) use dev::serve;
+use std::{convert::Infallible, future::Future, pin::Pin, task::Poll};
 
-#[cfg(not(debug_assertions))]
-pub(crate) use release::serve;
+use axum::response::IntoResponse;
+use http::header;
+use rust_embed::RustEmbed;
+use tower::Service;
 
-#[cfg(debug_assertions)]
-mod dev {
-    use std::path::Path;
+#[derive(RustEmbed)]
+#[folder = "../../packages/web-ui/dist"]
+pub struct Public;
 
-    use tower_http::services::ServeDir;
+#[derive(Clone)]
+pub(crate) struct ServePublic;
 
-    pub fn serve() -> ServeDir {
-        let path = Path::new(file!())
-            .parent()
-            .and_then(Path::parent)
-            .and_then(Path::parent)
-            .unwrap()
-            .join("public");
-        tower_http::services::ServeDir::new(path)
-    }
+pub(crate) fn serve() -> ServePublic {
+    ServePublic
 }
 
-#[cfg(not(debug_assertions))]
-pub(crate) mod release {
-    use std::{convert::Infallible, future::Future, pin::Pin, task::Poll};
+impl<ReqBody> Service<http::Request<ReqBody>> for ServePublic {
+    type Response = axum::response::Response;
+    type Error = Infallible;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    use axum::response::IntoResponse;
-    use http::header;
-    use rust_embed::RustEmbed;
-    use tower::Service;
-
-    #[derive(RustEmbed)]
-    #[folder = "public"]
-    pub struct Public;
-
-    #[derive(Clone)]
-    pub(crate) struct ServePublic;
-
-    pub(crate) fn serve() -> ServePublic {
-        ServePublic
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
     }
 
-    impl<ReqBody> Service<http::Request<ReqBody>> for ServePublic {
-        type Response = axum::response::Response;
-        type Error = Infallible;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    fn call(&mut self, req: http::Request<ReqBody>) -> Self::Future {
+        let pathname = req.uri().path();
+        let pathname = pathname.strip_prefix("/").unwrap_or(pathname);
+        let mut data = Public::get(pathname);
 
-        fn poll_ready(
-            &mut self,
-            _cx: &mut std::task::Context<'_>,
-        ) -> std::task::Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
+        if let None = data {
+            if !pathname.starts_with("assets/") {
+                data = Public::get("index.html");
+            }
         }
 
-        fn call(&mut self, req: http::Request<ReqBody>) -> Self::Future {
-            let pathname = req.uri().path();
-            let pathname = pathname.strip_prefix("/").unwrap_or(pathname);
-            let data = Public::get(pathname);
+        let resp = match data {
+            None => http::status::StatusCode::NOT_FOUND.into_response(),
+            Some(data) => (
+                [(header::CONTENT_TYPE, data.metadata.mimetype())],
+                data.data,
+            )
+                .into_response(),
+        };
 
-            let resp = match data {
-                None => http::status::StatusCode::NOT_FOUND.into_response(),
-                Some(data) => (
-                    [(header::CONTENT_TYPE, data.metadata.mimetype())],
-                    data.data,
-                )
-                    .into_response(),
-            };
+        let fut = async { Ok(resp) };
 
-            let fut = async { Ok(resp) };
-
-            return Box::pin(fut);
-        }
+        return Box::pin(fut);
     }
 }

@@ -4,7 +4,7 @@ import { setTimeout } from "timers/promises";
 export const SayHello = defineJob({
   name: "my-job",
   async handler(input: { name: string }) {
-    await setTimeout(1000);
+    await setTimeout(20000);
     console.log(`Hello ${input.name}!`);
   },
 });

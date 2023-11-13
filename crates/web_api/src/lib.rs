@@ -3,7 +3,7 @@ mod events;
 
 use std::sync::Arc;
 
-use admin::{admin_routes, attach_views_reloader};
+use admin::admin_routes;
 use aide::{
     axum::{
         routing::{get, post},
@@ -12,7 +12,7 @@ use aide::{
     openapi::{Info, OpenApi},
     redoc::Redoc,
 };
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, response::Redirect, Extension, Json};
 use db::postgres::PgPool;
 use events::EnqueuedTasks;
 use pointguard_engine_postgres as db;
@@ -106,12 +106,11 @@ impl Server {
             .route("/api", Redoc::new("/api/openapi.json").axum_route())
             .route("/api/openapi.json", get(serve_api))
             .nest("/", admin_routes())
-            .api_route_with("/api/v1/version", get(stub), |r| {
-                r.description("hello").summary("what?")
-            })
-            .api_route_with("/api/v1/tasks", post(post_tasks), |r| {
-                r.description("hello").summary("what?")
-            })
+            .api_route("/api/v1/version", get(stub))
+            .api_route("/api/v1/tasks", post(post_tasks))
+            .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
+            .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
+            .api_route("/api/v1/tasks/finished", get(get_finished_tasks))
             .with_state(AppState { db: self.pool })
             .finish_api_with(&mut api, |api| api.default_response::<String>())
             .layer(Extension(api))
@@ -120,10 +119,7 @@ impl Server {
         #[cfg(debug_assertions)]
         {
             let reloader = tower_livereload::LiveReloadLayer::new();
-            let views = attach_views_reloader(reloader.reloader());
-            app = app
-                .layer(reloader)
-                .layer(axum::Extension(std::sync::Arc::new(views)));
+            app = app.layer(reloader);
         };
 
         let host = self.host;
@@ -137,4 +133,29 @@ impl Server {
 
 async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
     Json(api)
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+struct CancelTaskParams {
+    id: i64,
+}
+
+async fn cancel_task(
+    State(state): State<AppState>,
+    axum::extract::Path(path): axum::extract::Path<CancelTaskParams>,
+) -> impl IntoApiResponse {
+    let _task = db::cancel_task(&state.db, path.id)
+        .await
+        .expect("cancel task");
+    Redirect::to("/api/v1/tasks/enqueued")
+}
+
+async fn get_finished_tasks(State(state): State<AppState>) -> impl IntoApiResponse {
+    let finished_tasks = db::finished_tasks(&state.db).await.expect("finished tasks");
+    Json(finished_tasks)
+}
+
+async fn get_enqueued_tasks(State(state): State<AppState>) -> impl IntoApiResponse {
+    let enqueued_tasks = db::enqueued_tasks(&state.db).await.expect("enqueued tasks");
+    Json(enqueued_tasks)
 }
