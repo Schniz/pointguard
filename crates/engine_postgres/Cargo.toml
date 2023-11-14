@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.74"
-chrono = "0.4.31"
+chrono = { version = "0.4.31", features = ["serde"] }
 nanoid = "0.4.0"
 schemars = { version = "0.8.16", features = ["chrono"] }
 serde = { version = "1.0.192", features = ["derive"] }

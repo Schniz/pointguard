@@ -3,17 +3,24 @@ import { apiClient } from "../api-client";
 import { useSWR } from "../swr";
 import formatDuration from "date-fns/formatDuration";
 import { useState } from "react";
+import { LogoEmptyState } from "../logo-empty-state";
 
 type LoaderData = Awaited<ReturnType<typeof loader>>;
 
 export function Component() {
   const [data] = useSWR<LoaderData>();
   return (
-    <div className="divide-y divide-gray-200 bg-white">
-      {data.map((task) => {
-        return <Row key={task.id} task={task} />;
-      })}
-    </div>
+    <>
+      {data.length === 0 ? (
+        <LogoEmptyState>No finished tasks.</LogoEmptyState>
+      ) : (
+        <div className="max-w-screen-lg w-full mx-auto mt-4 rounded-xl overflow-hidden">
+          {data.map((task) => (
+            <Row task={task} key={task.id} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -29,8 +36,13 @@ function Row({ task }: { task: LoaderData[number] }) {
 
   return (
     <div
-      className="even:bg-orange-50 even:bg-opacity-50"
+      className="even:bg-gray-100 bg-white"
       tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          setOpen((o) => !o);
+        }
+      }}
       role="checkbox"
       onClick={() => setOpen((o) => !o)}
     >
@@ -58,7 +70,7 @@ function Row({ task }: { task: LoaderData[number] }) {
           </svg>
         </div>
         <div className="text-sm">
-          <div className="text-gray-500">{task.jobName}</div>
+          <div className="text-gray-500 font-medium">{task.jobName}</div>
           <div className="text-gray-400">{task.endpoint}</div>
         </div>
         <div>
@@ -76,8 +88,8 @@ function Row({ task }: { task: LoaderData[number] }) {
         </div>
       </div>
       {open && (
-        <div className="p-4 text-xs text-gray-500">
-          <pre>{JSON.stringify(task.data)}</pre>
+        <div className="p-4 text-sm text-gray-500">
+          <pre>{JSON.stringify(task.data, null, 2)}</pre>
         </div>
       )}
     </div>

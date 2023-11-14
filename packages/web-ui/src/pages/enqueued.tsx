@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiClient } from "../api-client";
 import formatRelative from "date-fns/formatRelative";
 import { useSWR } from "../swr";
+import { LogoEmptyState } from "../logo-empty-state";
 
 type LoaderData = Awaited<ReturnType<typeof loader>>;
 
@@ -9,11 +10,17 @@ export function Component() {
   const [data, refetch] = useSWR<LoaderData>();
 
   return (
-    <div id="enqueued-table" className="divide-y divide-gray-200 bg-white">
-      {data.map((task) => (
-        <Row task={task} key={task.id} refetch={refetch} />
-      ))}
-    </div>
+    <>
+      {data.length === 0 ? (
+        <LogoEmptyState>No enqueued tasks.</LogoEmptyState>
+      ) : (
+        <div className="max-w-screen-lg mx-auto mt-4 rounded-xl overflow-hidden w-full">
+          {data.map((task) => (
+            <Row task={task} key={task.id} refetch={refetch} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -22,12 +29,18 @@ function Row({ task, refetch }: { task: LoaderData[number]; refetch(): void }) {
 
   return (
     <div
-      className="even:bg-orange-50 even:bg-opacity-50"
+      className="even:bg-gray-50 bg-white"
       tabIndex={0}
       role="checkbox"
       onClick={() => setOpen((o) => !o)}
     >
-      <div className="flex items-center text-gray-500 text-sm p-4 space-x-2">
+      <div className="flex items-center text-gray-500 text-sm p-4 space-x-4">
+        <div className="text-gray-400 text-sm flex items-center">
+          <div
+            data-active={!!task.workerId}
+            className="ml-2 rounded-full h-2 w-2 data-[active=true]:bg-orange-400 data-[active=true]:block hidden"
+          />
+        </div>
         <div>
           <svg
             className="w-6 h-6 text-gray-400"
@@ -50,27 +63,21 @@ function Row({ task, refetch }: { task: LoaderData[number]; refetch(): void }) {
             )}
           </svg>
         </div>
-        <div className="text-gray-400 text-sm flex items-center">
-          <div
-            data-active={!!task.workerId}
-            className="ml-2 rounded-full h-2 w-2 data-[active=true]:bg-orange-400 data-[active=true]:block hidden"
-          ></div>
+        <div>
+          <time dateTime={task.runAt} x-timeago="runAt">
+            {formatRelative(new Date(task.runAt), new Date())}
+          </time>
         </div>
         <div className="whitespace-nowrap text-sm text-gray-500">
-          {task.jobName}
+          <div className="font-medium">{task.jobName}</div>
+          <div className="text-gray-400">{task.endpoint}</div>
         </div>
-        <div className="text-gray-500 break-all font-mono">{task.name}</div>
         <div className="font-mono text-xs break-all">
           {Boolean(task.retryCount > 0 && task.maxRetries) && (
             <>
               {task.retryCount}/{task.maxRetries}
             </>
           )}
-        </div>
-        <div>
-          <time dateTime={task.runAt} x-timeago="runAt">
-            {formatRelative(new Date(task.runAt), new Date())}
-          </time>
         </div>
         <div className="flex-1 text-xs break-all text-end flex items-center justify-end">
           <button
@@ -97,7 +104,10 @@ function Row({ task, refetch }: { task: LoaderData[number]; refetch(): void }) {
         </div>
       </div>
       {open && (
-        <div className="p-4 text-xs text-gray-500">
+        <div
+          className="p-4 text-xs text-gray-500"
+          onClick={(e) => e.stopPropagation()}
+        >
           <pre>{JSON.stringify(task.data)}</pre>
         </div>
       )}

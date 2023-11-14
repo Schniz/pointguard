@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "packageManager": "pnpm@8.6.2",
   "scripts": {
     "build": "turbo run build"
   },
