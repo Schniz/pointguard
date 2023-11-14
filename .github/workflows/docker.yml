@@ -1,5 +1,9 @@
 name: Docker
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: ["main"]
@@ -41,6 +45,8 @@ jobs:
       - run: pnpm run build --scope=@pointguard/web-ui
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.rust_target }}
 
       - name: build binary
         run: |
