@@ -88,7 +88,7 @@ pub struct Server {
     pub pool: PgPool,
     pub host: String,
     pub port: u16,
-    pub on_bind: Box<dyn FnOnce() + Send + Sync>,
+    pub on_bind: Box<dyn FnOnce(&str, u16) + Send + Sync>,
 }
 
 impl Server {
@@ -127,7 +127,7 @@ impl Server {
         let port = self.port;
 
         let server = axum::Server::bind(&format!("{host}:{port}").parse().unwrap());
-        (self.on_bind)();
+        (self.on_bind)(&host, self.port);
         server
             .serve(app.into_make_service())
             .with_graceful_shutdown(shutdown_signal)

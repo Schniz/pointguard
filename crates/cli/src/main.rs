@@ -1,5 +1,6 @@
 mod task_loop;
 
+use clap::Parser;
 use futures::future::FutureExt;
 use pointguard_engine_postgres as db;
 use pointguard_web_api::Server;
@@ -23,28 +24,35 @@ pub fn print_welcome_message(host: impl Display, port: impl Display) {
     eprintln!();
 }
 
+#[derive(Parser)]
+struct Cli {
+    #[clap(long, env = "DATABASE_URL")]
+    database_url: String,
+
+    #[clap(long, env = "HOST", default_value = "127.0.0.1")]
+    host: String,
+
+    #[clap(long, env = "PORT", default_value = "8080")]
+    port: u16,
+}
+
 #[tokio::main]
 async fn main() {
     init_logging();
 
-    let port: u16 = std::env::var("PORT")
-        .unwrap_or_else(|_| "8080".to_string())
-        .parse()
-        .unwrap();
-    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let cli = Cli::parse();
 
-    let pool = db::connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
-        .await
-        .unwrap();
+    let pool = db::connect(&cli.database_url).await.unwrap();
 
     let termination = shutdown_signal().shared();
 
     let task_loop = task_loop::run(pool.clone(), termination.clone());
+
     let serving = Server {
         pool,
-        host: host.clone(),
-        port: port.clone(),
-        on_bind: Box::new(move || print_welcome_message(host, port)),
+        host: cli.host,
+        port: cli.port,
+        on_bind: Box::new(|host, port| print_welcome_message(host, port)),
     }
     .serve(termination);
 
