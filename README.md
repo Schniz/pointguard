@@ -12,7 +12,8 @@
 
 A simple background job server (database) on top of PostgreSQL, that can be used in _any_ language and _any_ environment.
 
-> (this is obviously experimental, but it's for another project I'm working on so...)
+> [!WARNING]
+> this is obviously experimental, but it's for another project I'm working on on so... this is why issues are closed. feel free to [@ or DM me at Twitter](https://twitter.com/galstar) if you want to chat.
 
 ## Features
 
