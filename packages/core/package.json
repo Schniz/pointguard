@@ -1,7 +1,7 @@
 {
-  "name": "@pointguard/nextjs",
+  "name": "@pointguard/core",
   "version": "1.0.0",
-  "description": "",
+  "description": "core",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@pointguard/core": "workspace:*",
+    "@effect/schema": "^0.47.6",
     "@types/node": "^20.9.0",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2"
