@@ -6,9 +6,7 @@ edition = "2021"
 [dependencies]
 aide = { version = "0.12.0", features = ["axum", "redoc"] }
 schemars = { version = "0.8.15", features = ["url", "chrono"] }
-pointguard_dependencies = { path = "../dependencies" }
 axum = "0.6.20"
-tokio = { version = "1.33.0", features = ["full"] }
 pointguard_engine_postgres = { path = "../engine_postgres" }
 serde = { version = "1.0.192", features = ["derive"] }
 nanoid = "0.4.0"
@@ -17,7 +15,6 @@ url = { version = "2.4.1", features = ["serde"] }
 tracing = "0.1.40"
 chrono = { version = "0.4.31", features = ["serde"] }
 tower-livereload = "0.8.2"
-notify = "6.1.1"
 rust-embed = { version = "8.0.0", features = ["mime-guess"] }
 tower-http = { version = "0.4.4", features = ["fs"] }
 http = "0.2.10"
