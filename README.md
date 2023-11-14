@@ -12,6 +12,8 @@
 
 A simple background job server (database) on top of PostgreSQL, that can be used in _any_ language and _any_ environment.
 
+> (this is obviously experimental, but it's for another project I'm working on so...)
+
 ## Features
 
 🪶 **Lightweight**: Pointguard is a single binary with no dependencies, written in Rust. The Docker image is so small it feels illegal to add it to your stack.
