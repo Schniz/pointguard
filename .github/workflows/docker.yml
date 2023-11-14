@@ -60,9 +60,13 @@ jobs:
         with:
           path: target/${{matrix.rust_target}}/release/pointguard_cli
           name: ${{matrix.artifact_name}}
+
   docker:
     needs:
       - build_binaries
+    permissions:
+      contents: read
+      packages: write
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
