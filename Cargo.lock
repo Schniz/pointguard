@@ -1292,6 +1292,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "colored",
+ "futures",
  "pointguard_engine_postgres",
  "pointguard_web_api",
  "reqwest",

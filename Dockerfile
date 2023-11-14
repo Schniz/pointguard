@@ -31,7 +31,7 @@ ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
     cargo build --release --bin pointguard_cli && \
-    cp /app/target/release/pointguard_cli /app/pointguard_cli
+    cp /app/target/release/pointguard_cli /app/pointguard_cli.exe
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime

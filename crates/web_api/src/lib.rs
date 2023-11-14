@@ -15,6 +15,7 @@ use aide::{
 use axum::{extract::State, response::Redirect, Extension, Json};
 use db::postgres::PgPool;
 use events::EnqueuedTasks;
+use futures::Future;
 use pointguard_engine_postgres as db;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -91,7 +92,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn serve(self) {
+    pub async fn serve(self, shutdown_signal: impl Future<Output = ()>) {
         let mut api = OpenApi {
             info: Info {
                 description: Some("pointguard api".to_string()),
@@ -127,7 +128,11 @@ impl Server {
 
         let server = axum::Server::bind(&format!("{host}:{port}").parse().unwrap());
         (self.on_bind)();
-        server.serve(app.into_make_service()).await.unwrap();
+        server
+            .serve(app.into_make_service())
+            .with_graceful_shutdown(shutdown_signal)
+            .await
+            .unwrap();
     }
 }
 

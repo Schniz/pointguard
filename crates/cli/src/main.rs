@@ -1,5 +1,6 @@
 mod task_loop;
 
+use futures::future::FutureExt;
 use pointguard_engine_postgres as db;
 use pointguard_web_api::Server;
 use std::fmt::Display;
@@ -36,14 +37,44 @@ async fn main() {
         .await
         .unwrap();
 
-    tokio::spawn(task_loop::run(pool.clone()));
+    let termination = shutdown_signal().shared();
 
-    Server {
+    let task_loop = task_loop::run(pool.clone(), termination.clone());
+    let serving = Server {
         pool,
         host: host.clone(),
         port: port.clone(),
         on_bind: Box::new(move || print_welcome_message(host, port)),
     }
-    .serve()
-    .await;
+    .serve(termination);
+
+    tokio::join!(task_loop, serving);
+}
+
+async fn shutdown_signal() {
+    use tokio::signal;
+
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("signal received, starting graceful shutdown");
 }
