@@ -7,15 +7,11 @@ export default function Home() {
         action={async (formData: FormData) => {
           "use server";
 
-          await SayHello.enqueue(
-            {
-              name: formData.get("name") as string,
-            },
-            {
-              // 1 hour from now
-              // runAt: new Date(Date.now() + 1000 * 60 * 60),
-            }
-          );
+          await SayHello.withRunAt(
+            () => new Date(Date.now() + 1000 * 60)
+          ).enqueue({
+            name: formData.get("name") as string,
+          });
         }}
       >
         <input type="text" name="name" />

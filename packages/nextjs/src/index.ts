@@ -11,13 +11,104 @@ const EnqueueOptions = Schema.struct({
 
 const encodeEnqueueOptions = Schema.encodeSync(EnqueueOptions);
 
-interface Job<Input> {
-  name: string;
-
+type EnqueueOptionsFields = keyof Schema.Schema.To<typeof EnqueueOptions>;
+type ChainedEnqueuer<Input> = {
+  [K in EnqueueOptionsFields as `with${Capitalize<K>}`]: (
+    value:
+      | Schema.Schema.To<typeof EnqueueOptions>[K]
+      | (() => Schema.Schema.To<typeof EnqueueOptions>[K])
+  ) => ChainedEnqueuer<Input>;
+} & {
   enqueue(
     input: Input,
-    opts?: Schema.Schema.To<typeof EnqueueOptions>
+    opts?: Partial<Schema.Schema.To<typeof EnqueueOptions>>
   ): Promise<void>;
+};
+
+type LazyEnqueueOptions = {
+  [K in EnqueueOptionsFields]:
+    | Schema.Schema.To<typeof EnqueueOptions>[K]
+    | (() => Schema.Schema.To<typeof EnqueueOptions>[K]);
+};
+
+function createChainedEnqueuer<Input>(opts: {
+  jobName: string;
+  enqueueUrl: URL | string;
+  jobHandlerUrl: URL | string;
+  opts: Partial<LazyEnqueueOptions>;
+}): ChainedEnqueuer<Input> {
+  const setOption = <K extends EnqueueOptionsFields>(
+    key: K,
+    value:
+      | Schema.Schema.To<typeof EnqueueOptions>[K]
+      | (() => Schema.Schema.To<typeof EnqueueOptions>[K])
+  ) =>
+    createChainedEnqueuer({
+      ...opts,
+      opts: {
+        ...opts.opts,
+        [key]: value,
+      },
+    });
+
+  return {
+    withMaxRetries: (value) => setOption("maxRetries", value),
+    withName: (value) => setOption("name", value),
+    withRunAt: (value) => setOption("runAt", value),
+    enqueue: async (input, overrides) =>
+      enqueueJob({
+        enqueueUrl: opts.enqueueUrl,
+        jobHandlerUrl: opts.jobHandlerUrl,
+        jobName: opts.jobName,
+        input: input,
+        opts: {
+          ...Object.fromEntries(
+            Object.entries(opts.opts).map(([key, maybeFn]) => {
+              const value = typeof maybeFn === "function" ? maybeFn() : maybeFn;
+              return [key, value] as const;
+            }, {})
+          ),
+          ...overrides,
+        },
+      }),
+  };
+}
+
+async function enqueueJob({
+  jobName,
+  opts,
+  input,
+  enqueueUrl,
+  jobHandlerUrl,
+}: {
+  jobName: string;
+  opts?: Schema.Schema.To<typeof EnqueueOptions>;
+  input: unknown;
+  jobHandlerUrl: URL | string;
+  enqueueUrl: URL | string;
+}) {
+  const jobOptions = encodeEnqueueOptions(opts ?? {});
+  const body = JSON.stringify({
+    data: input,
+    jobName,
+    endpoint: String(jobHandlerUrl),
+    ...jobOptions,
+  });
+  const response = await fetch(enqueueUrl, {
+    cache: "no-cache",
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body,
+  });
+  if (!response.ok) {
+    throw new Error(`failed to enqueue job ${jobName}: ${response.statusText}`);
+  }
+}
+
+interface Job<Input> extends ChainedEnqueuer<Input> {
+  name: string;
 
   handler(
     input: Input,
@@ -50,28 +141,12 @@ export function defineJob<Input>(options: {
   return {
     handler: options.handler,
     name: options.name,
-    async enqueue(input, opts) {
-      const jobOptions = encodeEnqueueOptions(opts ?? {});
-      const body = JSON.stringify({
-        data: input,
-        jobName: options.name,
-        endpoint: String(jobHandlerUrl),
-        ...jobOptions,
-      });
-      const response = await fetch(enqueueUrl, {
-        cache: "no-cache",
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body,
-      });
-      if (!response.ok) {
-        throw new Error(
-          `failed to enqueue job ${options.name}: ${response.statusText}`
-        );
-      }
-    },
+    ...createChainedEnqueuer({
+      enqueueUrl: String(enqueueUrl),
+      jobHandlerUrl: String(jobHandlerUrl),
+      jobName: options.name,
+      opts: {},
+    }),
   };
 }
 
@@ -98,7 +173,7 @@ export function createHandler(opts: {
 
     const job = jobsByName.get(body.jobName);
     if (!job) {
-      return Response.json("job not found", { status: 404 });
+      return new Response("job not found", { status: 404 });
     }
 
     await job.handler(body.input, {
@@ -108,6 +183,6 @@ export function createHandler(opts: {
       jobName: body.jobName,
     });
 
-    return Response.json("ok");
+    return new Response("ok");
   };
 }
