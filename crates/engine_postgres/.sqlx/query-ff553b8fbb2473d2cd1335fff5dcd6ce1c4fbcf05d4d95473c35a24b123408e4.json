@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE\n                tasks\n            SET\n                worker_id = current_setting('application_name'),\n                started_at = now(),\n                updated_at = now()\n            WHERE\n                id = ANY($1)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ff553b8fbb2473d2cd1335fff5dcd6ce1c4fbcf05d4d95473c35a24b123408e4"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE\n                    tasks\n                SET\n                    worker_id = NULL,\n                    started_at = NULL,\n                    run_at = now() + retry_delay,\n                    updated_at = now(),\n                    retry_count = retry_count + 1\n                WHERE\n                    id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4840fee578e4be1da36e60d58955c9dff37fc13d17798f9372e8011adf1ab7cc"
+}

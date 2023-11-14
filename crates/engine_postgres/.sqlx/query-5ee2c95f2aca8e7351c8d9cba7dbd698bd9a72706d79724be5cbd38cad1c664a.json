@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, created_at, job_name, data, endpoint, name, false as \"cleaned_up!\", max_retries, retry_count\n        FROM tasks\n        LEFT JOIN running_workers ON tasks.worker_id = running_workers.application_name\n        WHERE running_workers.application_name IS NULL\n          AND run_at <= NOW()\n        FOR UPDATE of tasks\n        SKIP LOCKED\n        LIMIT $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "job_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "cleaned_up!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "max_retries",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "retry_count",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "5ee2c95f2aca8e7351c8d9cba7dbd698bd9a72706d79724be5cbd38cad1c664a"
+}

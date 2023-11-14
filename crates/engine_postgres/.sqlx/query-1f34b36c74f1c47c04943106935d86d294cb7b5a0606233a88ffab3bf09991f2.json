@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            created_at,\n            job_name,\n            data,\n            endpoint,\n            name,\n            \"started_at\" as \"started_at!\",\n            max_retries,\n            retry_count,\n            worker_id as \"worker_id!\"\n        FROM tasks\n        JOIN running_workers ON tasks.worker_id = running_workers.application_name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "job_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "started_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "max_retries",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "retry_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "worker_id!",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "1f34b36c74f1c47c04943106935d86d294cb7b5a0606233a88ffab3bf09991f2"
+}

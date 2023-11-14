@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO finished_tasks\n            (job_name, data, endpoint, name, retries, started_at, task_created_at)\n            SELECT job_name, data, endpoint, name, retry_count, started_at, created_at\n            FROM tasks WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e1acfe6a23452fc65c481e616f2d09783058c56aa955f7deefaf5a62ded1fcde"
+}

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO tasks (job_name, data, endpoint, name, run_at, max_retries)\n        VALUES ($1, $2, $3, $4, COALESCE($5, now()), $6)\n        ON CONFLICT (job_name, name, endpoint) DO UPDATE\n        SET\n            updated_at = now()\n        RETURNING\n            id,\n            CASE WHEN run_at <= NOW()\n                THEN pg_notify($7, json_build_object('run_at', run_at, 'id', id)::text)\n                ELSE null\n            END AS \"notify\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "notify",
+        "type_info": "Void"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Jsonb",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "e357e8d10246c55a48ba8cea0ce374ef21df3eff45454647bc7a450f20d3c89d"
+}
