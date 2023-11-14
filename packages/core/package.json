@@ -1,9 +1,12 @@
 {
   "name": "@pointguard/core",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "publishConfig": {
     "access": "public"
   },
+  "files": [
+    "dist"
+  ],
   "description": "A core package for Pointguard",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
