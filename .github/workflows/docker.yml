@@ -6,33 +6,49 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  NODE_VERSION: 20.x
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build_binaries:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+    strategy:
+      matrix:
+        include:
+          - rust_target: "aarch64-unknown-linux-musl"
+            docker_tag: "aarch64-musl"
+            artifact_name: "arm64"
+          - rust_target: "armv7-unknown-linux-musleabihf"
+            docker_tag: "armv7-musleabihf"
+            artifact_name: "armv7"
+          - rust_target: "x86_64-unknown-linux-musl"
+            docker_tag: "x86_64-musl"
+            artifact_name: "amd64"
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm run build --scope=@pointguard/web-ui
+
+      - name: build binary
+        run: |
+          docker run -e SQLX_OFFLINE=true --rm -v "$(pwd)":/home/rust/src messense/rust-musl-cross:${{matrix.docker_tag}} \
+            cargo build --release --bin pointguard_cli
+          docker run -e SQLX_OFFLINE=true --rm -v "$(pwd)":/home/rust/src messense/rust-musl-cross:${{matrix.docker_tag}} \
+            musl-strip target/${{matrix.rust_target}}/release/pointguard_cli
+
+      - name: store binary artifact
+        uses: actions/upload-artifact@v2
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          path: target/${{matrix.rust_target}}/release/pointguard_cli
+          name: ${{matrix.artifact_name}}
