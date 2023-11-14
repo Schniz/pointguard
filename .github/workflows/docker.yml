@@ -40,6 +40,8 @@ jobs:
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm run build --scope=@pointguard/web-ui
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: build binary
         run: |
           docker run -e SQLX_OFFLINE=true --rm -v "$(pwd)":/home/rust/src messense/rust-musl-cross:${{matrix.docker_tag}} \
