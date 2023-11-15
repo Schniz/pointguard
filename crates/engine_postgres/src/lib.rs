@@ -4,7 +4,7 @@ mod task_listener;
 
 pub use inflight_task::*;
 pub use sqlx::postgres;
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool};
 use std::str::FromStr;
 pub use task_listener::{NewTaskPayload, TaskListener};
 
@@ -195,17 +195,50 @@ pub async fn enqueue(db: &sqlx::PgPool, task: &NewTask) -> Result<i64, sqlx::Err
     Ok(id.id)
 }
 
-pub async fn connect(url: &str) -> Result<PgPool, sqlx::Error> {
+#[derive(Default)]
+pub struct DbOptions {
+    pub schema: Option<String>,
+}
+
+pub async fn connect(url: &str, options: &DbOptions) -> Result<PgPool, sqlx::Error> {
     let connection_opts = sqlx::postgres::PgConnectOptions::from_str(url)
         .expect("parse db url")
         .application_name(&format!("pointguard:{}", nanoid::nanoid!()));
-    sqlx::postgres::PgPoolOptions::new()
-        .connect_with(connection_opts)
-        .await
+    let mut pgpool_options = sqlx::postgres::PgPoolOptions::new();
+
+    if let Some(schema) = options.schema.clone() {
+        pgpool_options = pgpool_options.after_connect(move |conn, _| {
+            let schema = schema.to_string();
+            Box::pin(async move {
+                conn.execute(&format!("SET search_path = '{schema}';")[..])
+                    .await?;
+                Ok(())
+            })
+        });
+    }
+
+    pgpool_options.connect_with(connection_opts).await
 }
 
-pub async fn migrate(url: &str) -> Result<(), sqlx::Error> {
-    let pool = connect(url).await?;
-    sqlx::migrate!().run(&pool).await?;
-    Ok(())
+pub async fn migrate(pool: &PgPool, options: &DbOptions) -> Result<(), sqlx::Error> {
+    let result = sqlx::migrate!().run(pool).await;
+
+    if let Some(schema) = options.schema.clone() {
+        if let Err(sqlx::migrate::MigrateError::Execute(sqlx::Error::Database(err))) =
+            result.as_ref()
+        {
+            if let Some(code) = err.code() {
+                if code == "3F000" {
+                    tracing::info!("schema {schema:?} not found. trying to create it.");
+                    pool.execute(&format!("CREATE SCHEMA {};", schema)[..])
+                        .await?;
+                    tracing::info!("schema {schema:?} created!");
+                    sqlx::migrate!().run(pool).await?;
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    result.map_err(|e| e.into())
 }

@@ -34,6 +34,12 @@ struct Cli {
 
     #[clap(long, env = "PORT", default_value = "8080")]
     port: u16,
+
+    #[clap(long = "migrate")]
+    should_migrate: bool,
+
+    #[clap(long = "database-schema", env = "DATABASE_SCHEMA")]
+    schema: Option<String>,
 }
 
 #[tokio::main]
@@ -42,7 +48,14 @@ async fn main() {
 
     let cli = Cli::parse();
 
-    let pool = db::connect(&cli.database_url).await.unwrap();
+    let db_options = db::DbOptions { schema: cli.schema };
+    let pool = db::connect(&cli.database_url, &db_options).await.unwrap();
+
+    if cli.should_migrate {
+        db::migrate(&pool, &db_options)
+            .await
+            .expect("running migrations");
+    }
 
     let termination = shutdown_signal().shared();
 
