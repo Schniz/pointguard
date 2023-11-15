@@ -31,10 +31,14 @@ type LazyEnqueueOptions = {
     | (() => Schema.Schema.To<typeof EnqueueOptions>[K]);
 };
 
+function getEnqueueUrl(baseUrl: string) {
+  return `${baseUrl.replace(/\/$/, "")}/api/v1/tasks`;
+}
+
 function createChainedEnqueuer<Input>(opts: {
   jobName: string;
-  enqueueUrl: URL | string;
-  jobHandlerUrl: URL | string;
+  pointguardBaseUrl: URL | string | undefined;
+  jobHandlerUrl: URL | string | undefined;
   opts: Partial<LazyEnqueueOptions>;
 }): ChainedEnqueuer<Input> {
   const setOption = <K extends EnqueueOptionsFields>(
@@ -57,7 +61,9 @@ function createChainedEnqueuer<Input>(opts: {
     withRunAt: (value) => setOption("runAt", value),
     enqueue: async (input, overrides) =>
       enqueueJob({
-        enqueueUrl: opts.enqueueUrl,
+        enqueueUrl: getEnqueueUrl(
+          String(opts.pointguardBaseUrl || getDefaultPointgaurgBaseUrl())
+        ),
         jobHandlerUrl: opts.jobHandlerUrl,
         jobName: opts.jobName,
         input: input,
@@ -84,14 +90,14 @@ async function enqueueJob({
   jobName: string;
   opts?: Schema.Schema.To<typeof EnqueueOptions>;
   input: unknown;
-  jobHandlerUrl: URL | string;
+  jobHandlerUrl: URL | string | undefined;
   enqueueUrl: URL | string;
 }) {
   const jobOptions = encodeEnqueueOptions(opts ?? {});
   const body = JSON.stringify({
     data: input,
     jobName,
-    endpoint: String(jobHandlerUrl),
+    endpoint: String(jobHandlerUrl || getDefaultJobHandlerUrl()),
     ...jobOptions,
   });
   const response = await fetch(enqueueUrl, {
@@ -116,6 +122,17 @@ export interface Job<Input> extends ChainedEnqueuer<Input> {
   ): Promise<void>;
 }
 
+function assertEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`missing env var ${name}`);
+  }
+  return value;
+}
+
+const getDefaultPointgaurgBaseUrl = () => assertEnv("POINTGUARD_URL");
+const getDefaultJobHandlerUrl = () => assertEnv("POINTGUARD_JOBS_URL");
+
 export function defineJob<Input>(options: {
   handler: (input: Input) => Promise<void>;
   name: string;
@@ -123,27 +140,12 @@ export function defineJob<Input>(options: {
   pointguardBaseUrl?: URL;
   jobHandlerUrl?: URL;
 }): Job<Input> {
-  const pointguardBaseUrl =
-    options.pointguardBaseUrl ?? process.env.POINTGUARD_URL;
-  if (!pointguardBaseUrl) {
-    throw new Error("pointguardBaseUrl is required (or POINTGUARD_URL)");
-  }
-  const jobHandlerUrl =
-    options.jobHandlerUrl ?? process.env.POINTGUARD_JOBS_URL;
-  if (!jobHandlerUrl) {
-    throw new Error("jobHandlerUrl is required (or POINTGUARD_JOBS_URL)");
-  }
-  const enqueueUrl = new URL(pointguardBaseUrl);
-  enqueueUrl.pathname = `${enqueueUrl.pathname.replace(
-    /\/$/,
-    ""
-  )}/api/v1/tasks`;
   return {
     handler: options.handler,
     name: options.name,
     ...createChainedEnqueuer({
-      enqueueUrl: String(enqueueUrl),
-      jobHandlerUrl: String(jobHandlerUrl),
+      pointguardBaseUrl: options.pointguardBaseUrl,
+      jobHandlerUrl: options.jobHandlerUrl,
       jobName: options.name,
       opts: {},
     }),
