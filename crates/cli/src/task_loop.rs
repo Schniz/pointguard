@@ -53,7 +53,6 @@ pub async fn run(db: db::postgres::PgPool, termination: impl Future<Output = ()>
                 break;
             },
             _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
-                tracing::info!("woke up from listener");
             }
         };
 
