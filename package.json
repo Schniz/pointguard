@@ -6,12 +6,16 @@
   "main": "index.js",
   "packageManager": "pnpm@8.6.2",
   "scripts": {
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "changeset:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "changeset:publish": "pnpm run build && changeset publish"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@changesets/changelog-github": "^0.4.8",
+    "@changesets/cli": "^2.26.2",
     "turbo": "^1.10.16"
   }
 }
