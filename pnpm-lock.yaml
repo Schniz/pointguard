@@ -18,6 +18,8 @@ importers:
         specifier: ^1.10.16
         version: 1.10.16
 
+  crates/cli: {}
+
   examples/nextjs:
     dependencies:
       '@pointguard/nextjs':
