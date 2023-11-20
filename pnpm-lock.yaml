@@ -18,7 +18,11 @@ importers:
         specifier: ^1.10.16
         version: 1.10.16
 
-  crates/cli: {}
+  crates/cli:
+    devDependencies:
+      '@pointguard/web-ui':
+        specifier: workspace:^
+        version: link:../../packages/web-ui
 
   examples/nextjs:
     dependencies:
