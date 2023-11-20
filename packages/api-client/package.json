@@ -8,8 +8,7 @@
   "scripts": {
     "generate:openapi-spec": "mkdir -p input && (cd ./node_modules/@pointguard/cli && cargo run --quiet -- openapi-spec) > input/openapi.json",
     "generate:openapi-types": "openapi-typescript input/openapi.json -o generated/openapi.ts",
-    "build": "pnpm generate:openapi-spec && pnpm generate:openapi-types && tsup",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "pnpm generate:openapi-spec && pnpm generate:openapi-types && tsup"
   },
   "keywords": [],
   "author": "",
