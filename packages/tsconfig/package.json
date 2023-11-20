@@ -1,0 +1,10 @@
+{
+  "name": "@pointguard/tsconfig",
+  "private": true,
+  "version": "0.0.0",
+  "description": "the shared typescript configurations",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
