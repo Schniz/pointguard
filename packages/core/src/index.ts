@@ -1,4 +1,5 @@
 import * as Schema from "@effect/schema/Schema";
+import { Client } from "@pointguard/api-client";
 
 const EnqueueOptions = Schema.struct({
   runAt: Schema.string.pipe(Schema.dateFromString, Schema.optional),
@@ -31,10 +32,6 @@ type LazyEnqueueOptions = {
     | (() => Schema.Schema.To<typeof EnqueueOptions>[K]);
 };
 
-function getEnqueueUrl(baseUrl: string) {
-  return `${baseUrl.replace(/\/$/, "")}/api/v1/tasks`;
-}
-
 function createChainedEnqueuer<Input>(opts: {
   jobName: string;
   pointguardBaseUrl: URL | string | undefined;
@@ -61,9 +58,11 @@ function createChainedEnqueuer<Input>(opts: {
     withRunAt: (value) => setOption("runAt", value),
     enqueue: async (input, overrides) =>
       enqueueJob({
-        enqueueUrl: getEnqueueUrl(
-          String(opts.pointguardBaseUrl || getDefaultPointgaurgBaseUrl())
-        ),
+        client: new Client({
+          baseUrl: String(
+            opts.pointguardBaseUrl || getDefaultPointgaurgBaseUrl()
+          ),
+        }),
         jobHandlerUrl: opts.jobHandlerUrl,
         jobName: opts.jobName,
         input: input,
@@ -84,30 +83,27 @@ async function enqueueJob({
   jobName,
   opts,
   input,
-  enqueueUrl,
+  client,
   jobHandlerUrl,
 }: {
   jobName: string;
   opts?: Schema.Schema.To<typeof EnqueueOptions>;
   input: unknown;
   jobHandlerUrl: URL | string | undefined;
-  enqueueUrl: URL | string;
+  client: Client;
 }) {
   const jobOptions = encodeEnqueueOptions(opts ?? {});
-  const body = JSON.stringify({
-    data: input,
-    jobName,
-    endpoint: String(jobHandlerUrl || getDefaultJobHandlerUrl()),
-    ...jobOptions,
-  });
-  const response = await fetch(enqueueUrl, {
-    cache: "no-cache",
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body,
-  });
+  const response = await fetch(
+    client.request("/api/v1/tasks", "post", {
+      data: input,
+      jobName,
+      endpoint: String(jobHandlerUrl || getDefaultJobHandlerUrl()),
+      ...jobOptions,
+    }),
+    {
+      cache: "no-cache",
+    }
+  );
   if (!response.ok) {
     throw new Error(`failed to enqueue job ${jobName}: ${response.statusText}`);
   }

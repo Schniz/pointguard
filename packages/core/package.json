@@ -19,6 +19,7 @@
   "license": "ISC",
   "devDependencies": {
     "@effect/schema": "^0.47.6",
+    "@pointguard/api-client": "workspace:^",
     "@pointguard/tsconfig": "workspace:^",
     "@types/node": "^20.9.0",
     "tsup": "^7.2.0",
