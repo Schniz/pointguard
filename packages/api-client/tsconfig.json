@@ -1,0 +1,7 @@
+{
+  "extends": "@pointguard/tsconfig/base.json",
+  "compilerOptions": {
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext"
+  }
+}

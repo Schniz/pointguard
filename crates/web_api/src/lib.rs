@@ -25,7 +25,7 @@ fn generate_nanoid() -> String {
 }
 
 #[derive(Clone)]
-pub(crate) struct AppState {
+pub struct AppState {
     db: db::postgres::PgPool,
 }
 
@@ -91,29 +91,36 @@ pub struct Server {
     pub on_bind: Box<dyn FnOnce(&str, u16) + Send + Sync>,
 }
 
+pub fn api_router() -> (axum::Router<AppState>, OpenApi) {
+    let mut api = OpenApi {
+        info: Info {
+            description: Some("pointguard api".to_string()),
+            ..Info::default()
+        },
+        ..OpenApi::default()
+    };
+
+    let app = ApiRouter::new()
+        .route("/api", Redoc::new("/api/openapi.json").axum_route())
+        .route("/api/openapi.json", get(serve_api))
+        .nest("/", admin_routes())
+        .api_route("/api/v1/version", get(stub))
+        .api_route("/api/v1/tasks", post(post_tasks))
+        .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
+        .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
+        .api_route("/api/v1/tasks/finished", get(get_finished_tasks))
+        .finish_api_with(&mut api, |api| api.default_response::<String>());
+
+    (app, api)
+}
+
 impl Server {
     pub async fn serve(self, shutdown_signal: impl Future<Output = ()>) {
-        let mut api = OpenApi {
-            info: Info {
-                description: Some("pointguard api".to_string()),
-                ..Info::default()
-            },
-            ..OpenApi::default()
-        };
-
         let enqueue_tasks = EnqueuedTasks::from(flume::unbounded());
 
-        let mut app = ApiRouter::new()
-            .route("/api", Redoc::new("/api/openapi.json").axum_route())
-            .route("/api/openapi.json", get(serve_api))
-            .nest("/", admin_routes())
-            .api_route("/api/v1/version", get(stub))
-            .api_route("/api/v1/tasks", post(post_tasks))
-            .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
-            .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
-            .api_route("/api/v1/tasks/finished", get(get_finished_tasks))
+        let (app, api) = api_router();
+        let mut app = app
             .with_state(AppState { db: self.pool })
-            .finish_api_with(&mut api, |api| api.default_response::<String>())
             .layer(Extension(api))
             .layer(Extension(Arc::new(enqueue_tasks)));
 
