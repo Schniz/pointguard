@@ -14,6 +14,7 @@ on:
 
 env:
   NODE_VERSION: 20.x
+  SQLX_OFFLINE: true
 
 jobs:
   build_binaries:
