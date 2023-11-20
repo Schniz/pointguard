@@ -47,6 +47,9 @@ importers:
       '@effect/schema':
         specifier: ^0.47.6
         version: 0.47.6(effect@2.0.0-next.54)(fast-check@3.13.2)
+      '@pointguard/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
       '@types/node':
         specifier: ^20.9.0
         version: 20.9.0
@@ -62,6 +65,9 @@ importers:
       '@pointguard/core':
         specifier: workspace:*
         version: link:../core
+      '@pointguard/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
       '@types/node':
         specifier: ^20.9.0
         version: 20.9.0
@@ -71,6 +77,8 @@ importers:
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
+
+  packages/tsconfig: {}
 
   packages/web-ui:
     dependencies:
@@ -96,6 +104,9 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
     devDependencies:
+      '@pointguard/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
       '@types/react':
         specifier: ^18.2.15
         version: 18.2.37
