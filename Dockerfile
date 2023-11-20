@@ -25,3 +25,4 @@ EXPOSE $PORT
 COPY --from=selector /server /usr/local/bin/
 RUN chmod u+x /usr/local/bin/server
 ENTRYPOINT ["/usr/local/bin/server"]
+CMD ["serve"]

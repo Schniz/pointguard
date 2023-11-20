@@ -1,6 +1,6 @@
 mod task_loop;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use futures::future::FutureExt;
 use pointguard_engine_postgres as db;
 use pointguard_web_api::Server;
@@ -11,7 +11,10 @@ pub fn init_logging() {
         std::env::set_var("RUST_LOG", "pointguard=debug");
     }
 
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_writer(std::io::stderr)
+        .init();
 }
 
 pub fn print_welcome_message(host: impl Display, port: impl Display) {
@@ -24,8 +27,24 @@ pub fn print_welcome_message(host: impl Display, port: impl Display) {
     eprintln!();
 }
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 struct Cli {
+    #[clap(subcommand)]
+    subcommand: Command,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Run the web server
+    Serve(Serve),
+
+    /// Print the OpenAPI spec
+    #[clap(name = "openapi-spec")]
+    OpenApiSpec(OpenApiSpec),
+}
+
+#[derive(Parser, Debug)]
+struct Serve {
     #[clap(long, env = "DATABASE_URL")]
     database_url: String,
 
@@ -42,34 +61,62 @@ struct Cli {
     schema: Option<String>,
 }
 
+impl Serve {
+    async fn call(self) {
+        let db_options = db::DbOptions {
+            schema: self.schema,
+        };
+        let pool = db::connect(&self.database_url, &db_options).await.unwrap();
+
+        if self.should_migrate {
+            db::migrate(&pool, &db_options)
+                .await
+                .expect("running migrations");
+        }
+
+        let termination = shutdown_signal().shared();
+
+        let task_loop = task_loop::run(pool.clone(), termination.clone());
+
+        let serving = Server {
+            pool,
+            host: self.host,
+            port: self.port,
+            on_bind: Box::new(|host, port| print_welcome_message(host, port)),
+        }
+        .serve(termination);
+
+        tokio::join!(task_loop, serving);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     init_logging();
 
-    let cli = Cli::parse();
-
-    let db_options = db::DbOptions { schema: cli.schema };
-    let pool = db::connect(&cli.database_url, &db_options).await.unwrap();
-
-    if cli.should_migrate {
-        db::migrate(&pool, &db_options)
-            .await
-            .expect("running migrations");
+    match Cli::parse().subcommand {
+        Command::Serve(serve) => serve.call().await,
+        Command::OpenApiSpec(spec) => spec.call(),
     }
+}
 
-    let termination = shutdown_signal().shared();
+#[derive(Parser, Debug)]
+struct OpenApiSpec {
+    #[clap(long)]
+    pretty: bool,
+}
 
-    let task_loop = task_loop::run(pool.clone(), termination.clone());
-
-    let serving = Server {
-        pool,
-        host: cli.host,
-        port: cli.port,
-        on_bind: Box::new(|host, port| print_welcome_message(host, port)),
+impl OpenApiSpec {
+    fn call(self) {
+        let spec = pointguard_web_api::api_router().1;
+        if self.pretty {
+            serde_json::to_writer_pretty(std::io::stdout(), &spec)
+                .expect("writing OpenAPI spec to stdout");
+        } else {
+            serde_json::to_writer(std::io::stdout(), &spec)
+                .expect("writing OpenAPI spec to stdout");
+        }
     }
-    .serve(termination);
-
-    tokio::join!(task_loop, serving);
 }
 
 async fn shutdown_signal() {
