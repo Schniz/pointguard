@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useLoaderData, useLocation, useNavigate } from "react-router-dom";
 
+export function useTypedLoaderData<T>() {
+  return useLoaderData() as T;
+}
+
 export function useSWR<T>(): [T, refetch: () => void] {
   const data = useLoaderData() as T;
   const l = useLocation();
