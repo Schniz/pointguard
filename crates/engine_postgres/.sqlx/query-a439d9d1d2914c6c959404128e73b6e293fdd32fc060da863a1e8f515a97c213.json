@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id,\n            job_name,\n            name,\n            endpoint,\n            started_at,\n            error_message,\n            created_at,\n            data,\n            retries\n        FROM\n            finished_tasks\n        ORDER BY\n            created_at DESC\n        ",
+  "query": "\n        SELECT\n            id,\n            job_name,\n            name,\n            endpoint,\n            started_at,\n            error_message,\n            created_at,\n            data,\n            retries\n        FROM\n            finished_tasks\n        ORDER BY\n            created_at DESC\n        LIMIT $1::int\n        OFFSET $2::bigint\n        ",
   "describe": {
     "columns": [
       {
@@ -50,7 +50,10 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
     },
     "nullable": [
       false,
@@ -64,5 +67,5 @@
       false
     ]
   },
-  "hash": "73949787ed350460b50ccc916283c29ff262bd76423b3f64ef819a439b168bce"
+  "hash": "a439d9d1d2914c6c959404128e73b6e293fdd32fc060da863a1e8f515a97c213"
 }
