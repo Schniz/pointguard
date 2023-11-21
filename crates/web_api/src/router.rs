@@ -95,6 +95,23 @@ pub fn api_router() -> (axum::Router<AppState>, OpenApi) {
         ..OpenApi::default()
     };
 
+    // let mut components = aide::openapi::Components {
+    //     ..Default::default()
+    // };
+
+    // components.schemas.insert(
+    //     "hello".to_string(),
+    //     aide::openapi::SchemaObject {
+    //         json_schema: schemars::schema::Schema::Object(
+    //             schemars::schema_for!(NewTaskBody).schema,
+    //         ),
+    //         external_docs: None,
+    //         example: None,
+    //     },
+    // );
+
+    // api.components = Some(components);
+
     let app = ApiRouter::new()
         .route("/api", Redoc::new("/api/openapi.json").axum_route())
         .route("/api/openapi.json", get(serve_api))
