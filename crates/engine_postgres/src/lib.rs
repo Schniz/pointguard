@@ -142,8 +142,6 @@ pub async fn finished_tasks(
     let (items, count) = tokio::join!(items, count);
     let (items, count) = (items?, count?);
 
-    tracing::info!("count: {}", count);
-
     let total_pages = count / limit as i64;
     let current_page = cursor.page.map_or(1, |p| p.get() as usize);
 
