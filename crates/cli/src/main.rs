@@ -87,6 +87,8 @@ impl Serve {
         .serve(termination);
 
         tokio::join!(task_loop, serving);
+
+        tracing::info!("goodbye!");
     }
 }
 
@@ -108,7 +110,8 @@ struct OpenApiSpec {
 
 impl OpenApiSpec {
     fn call(self) {
-        let spec = pointguard_web_api::api_router().1;
+        let mut spec = pointguard_web_api::openapi::new();
+        let _ = pointguard_web_api::api_router(&mut spec);
         if self.pretty {
             serde_json::to_writer_pretty(std::io::stdout(), &spec)
                 .expect("writing OpenAPI spec to stdout");

@@ -1,21 +1,12 @@
 use futures::Future;
 use pointguard_engine_postgres::{self as db, postgres::PgPool};
-
-#[derive(Debug, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct InvokedTask<'a> {
-    job_name: &'a str,
-    input: &'a serde_json::Value,
-    retry_count: i32,
-    max_retries: i32,
-    created_at: &'a chrono::DateTime<chrono::Utc>,
-}
+use pointguard_types::InvokedTaskPayload;
 
 #[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
 async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
     let response = http
         .post(&task.endpoint)
-        .json(&InvokedTask {
+        .json(&InvokedTaskPayload {
             job_name: &task.job_name[..],
             input: &task.data,
             retry_count: task.retry_count,

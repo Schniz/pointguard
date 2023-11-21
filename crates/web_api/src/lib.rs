@@ -1,5 +1,6 @@
 mod admin;
 mod events;
+pub mod openapi;
 mod router;
 
 use axum::Extension;
@@ -26,9 +27,9 @@ pub struct Server {
 impl Server {
     pub async fn serve(self, shutdown_signal: impl Future<Output = ()>) {
         let enqueue_tasks = EnqueuedTasks::from(flume::unbounded());
+        let mut api = openapi::new();
 
-        let (app, api) = api_router();
-        let mut app = app
+        let mut app = api_router(&mut api)
             .with_state(AppState { db: self.pool })
             .layer(Extension(api))
             .layer(Extension(Arc::new(enqueue_tasks)));
