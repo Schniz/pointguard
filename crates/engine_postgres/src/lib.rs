@@ -5,7 +5,7 @@ mod task_listener;
 pub use inflight_task::*;
 pub use sqlx::postgres;
 use sqlx::{Executor, PgPool};
-use std::str::FromStr;
+use std::{num::NonZeroU32, str::FromStr};
 pub use task_listener::{NewTaskPayload, TaskListener};
 
 #[derive(Debug, serde::Serialize, schemars::JsonSchema)]
@@ -35,6 +35,12 @@ pub struct EnqueuedTask {
     pub retry_count: i32,
     pub max_retries: i32,
     pub worker_id: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize, schemars::JsonSchema, Default)]
+pub struct PaginationCursor {
+    pub page: Option<NonZeroU32>,
+    pub limit: Option<i32>,
 }
 
 pub async fn cancel_task(db: &PgPool, id: i64) -> Result<Option<i64>, sqlx::Error> {
@@ -91,8 +97,24 @@ pub async fn enqueued_tasks(db: &PgPool) -> Result<Vec<EnqueuedTask>, sqlx::Erro
     .await
 }
 
-pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Error> {
-    sqlx::query_as!(
+#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Paginated<T> {
+    pub items: Vec<T>,
+    pub total_pages: usize,
+    pub page: usize,
+}
+
+pub async fn finished_tasks(
+    db: &PgPool,
+    cursor: &PaginationCursor,
+) -> Result<Paginated<FinishedTask>, sqlx::Error> {
+    let limit = cursor.limit.unwrap_or(100) + 1;
+    let offset = cursor.page.map_or(0, |p| (p.get() - 1) * limit as u32) as i64;
+
+    let count =
+        sqlx::query_scalar!("SELECT COUNT(*) as \"count!\" FROM finished_tasks").fetch_one(db);
+    let items = sqlx::query_as!(
         FinishedTask,
         "
         SELECT
@@ -109,10 +131,27 @@ pub async fn finished_tasks(db: &PgPool) -> Result<Vec<FinishedTask>, sqlx::Erro
             finished_tasks
         ORDER BY
             created_at DESC
-        "
+        LIMIT $1::int
+        OFFSET $2::bigint
+        ",
+        limit,
+        offset.into(),
     )
-    .fetch_all(db)
-    .await
+    .fetch_all(db);
+
+    let (items, count) = tokio::join!(items, count);
+    let (items, count) = (items?, count?);
+
+    tracing::info!("count: {}", count);
+
+    let total_pages = count / limit as i64;
+    let current_page = cursor.page.map_or(1, |p| p.get() as usize);
+
+    Ok(Paginated {
+        items,
+        total_pages: total_pages as usize,
+        page: current_page,
+    })
 }
 
 #[derive(serde::Serialize, Debug)]

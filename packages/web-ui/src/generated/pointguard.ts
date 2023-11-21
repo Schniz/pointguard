@@ -116,24 +116,36 @@ export interface paths {
   };
   "/api/v1/tasks/finished": {
     get: {
+      parameters: {
+        query?: {
+          limit?: number | null;
+          page?: number | null;
+        };
+      };
       responses: {
         200: {
           content: {
-            "application/json": ({
-                /** Format: date-time */
-                createdAt: string;
-                data: unknown;
-                endpoint: string;
-                errorMessage?: string | null;
-                /** Format: int64 */
-                id: number;
-                jobName: string;
-                name: string;
-                /** Format: int32 */
-                retries: number;
-                /** Format: date-time */
-                startedAt: string;
-              })[];
+            "application/json": {
+              items: ({
+                  /** Format: date-time */
+                  createdAt: string;
+                  data: unknown;
+                  endpoint: string;
+                  errorMessage?: string | null;
+                  /** Format: int64 */
+                  id: number;
+                  jobName: string;
+                  name: string;
+                  /** Format: int32 */
+                  retries: number;
+                  /** Format: date-time */
+                  startedAt: string;
+                })[];
+              /** Format: uint */
+              page: number;
+              /** Format: uint */
+              totalPages: number;
+            };
           };
         };
         /** @description plain text */

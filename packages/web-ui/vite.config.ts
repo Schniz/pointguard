@@ -7,7 +7,7 @@ export default defineConfig(() => ({
   base: "/admin",
   server: {
     proxy: {
-      "/api": "http://localhost:8080",
+      "/api": `http://localhost:${process.env.SERVER_PORT || "8080"}`,
     },
   },
 }));
