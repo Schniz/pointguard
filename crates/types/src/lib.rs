@@ -31,3 +31,16 @@ pub enum InvokedTaskResponse {
         retriable: bool,
     },
 }
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum Event {
+    /// A task was enqueued
+    TaskEnqueued,
+    /// A task was invoked
+    TaskInvoked,
+    /// A task failed
+    TaskFailed,
+    /// A task finished
+    TaskFinished,
+}

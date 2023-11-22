@@ -1320,6 +1320,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
+ "flume",
  "futures",
  "pointguard_engine_postgres",
  "pointguard_types",
