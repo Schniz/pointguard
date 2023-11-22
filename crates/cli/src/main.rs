@@ -75,8 +75,8 @@ impl Serve {
         }
 
         let termination = shutdown_signal().shared();
-
-        let task_loop = task_loop::run(pool.clone(), termination.clone());
+        let (events_tx, events_rx) = flume::unbounded();
+        let task_loop = task_loop::run(pool.clone(), termination.clone(), events_tx.clone());
 
         let serving = Server {
             pool,
@@ -84,7 +84,7 @@ impl Serve {
             port: self.port,
             on_bind: Box::new(|host, port| print_welcome_message(host, port)),
         }
-        .serve(termination);
+        .serve(termination, (events_tx, events_rx));
 
         tokio::join!(task_loop, serving);
 

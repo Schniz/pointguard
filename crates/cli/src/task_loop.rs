@@ -1,9 +1,14 @@
 use futures::Future;
 use pointguard_engine_postgres::{self as db, postgres::PgPool};
-use pointguard_types::{InvokedTaskPayload, InvokedTaskResponse};
+use pointguard_types::{Event, InvokedTaskPayload, InvokedTaskResponse};
 
 #[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
-async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
+async fn execute_task(
+    http: reqwest::Client,
+    task: db::InflightTask,
+    db: PgPool,
+    events_tx: flume::Sender<Event>,
+) {
     let response = http
         .post(&task.endpoint)
         .json(&InvokedTaskPayload {
@@ -28,17 +33,29 @@ async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool)
 
     match response {
         InvokedTaskResponse::Success {} => {
+            events_tx
+                .send_async(Event::TaskFinished)
+                .await
+                .expect("send event");
             tracing::info!("invocation completed");
             task.done(&db).await;
         }
         InvokedTaskResponse::Failure { reason, retriable } => {
+            events_tx
+                .send_async(Event::TaskFailed)
+                .await
+                .expect("send event");
             tracing::error!("invocation failed: {reason}");
             task.failed(&db, &reason, retriable).await;
         }
     };
 }
 
-pub async fn run(db: db::postgres::PgPool, termination: impl Future<Output = ()>) {
+pub async fn run(
+    db: db::postgres::PgPool,
+    termination: impl Future<Output = ()>,
+    events_tx: flume::Sender<Event>,
+) {
     tokio::pin!(termination);
     let mut listener = db::TaskListener::new(&db)
         .await
@@ -76,7 +93,16 @@ pub async fn run(db: db::postgres::PgPool, termination: impl Future<Output = ()>
         }
 
         for task in tasks.drain(..) {
-            tokio::spawn(execute_task(http.clone(), task, db.clone()));
+            events_tx
+                .send_async(Event::TaskInvoked)
+                .await
+                .expect("send event");
+            tokio::spawn(execute_task(
+                http.clone(),
+                task,
+                db.clone(),
+                events_tx.clone(),
+            ));
         }
     }
 }

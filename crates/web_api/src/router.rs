@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use crate::admin::admin_routes;
-use crate::events::EnqueuedTasks;
 use crate::AppState;
 use aide::{
     axum::{
-        routing::{get, post},
+        routing::{get, get_with, post},
         ApiRouter, IntoApiResponse,
     },
     openapi::OpenApi,
@@ -13,11 +10,14 @@ use aide::{
 };
 use axum::{
     extract::{Query, State},
-    response::Redirect,
+    response::{IntoResponse, Redirect, Sse},
     Extension, Json,
 };
 use db::PaginationCursor;
+use flume::{Receiver, Sender};
+use futures::StreamExt;
 use pointguard_engine_postgres as db;
+use pointguard_types::Event;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,7 @@ async fn cancel_task(
 
 #[tracing::instrument(skip_all, fields(%new_task.job_name))]
 async fn post_tasks(
-    Extension(enqueue_tasks): Extension<Arc<EnqueuedTasks>>,
+    Extension(event_tx): Extension<Sender<Event>>,
     State(state): State<AppState>,
     Json(new_task): Json<NewTaskBody>,
 ) -> impl IntoApiResponse {
@@ -75,15 +75,21 @@ async fn post_tasks(
     .await
     .expect("enqueue task");
 
-    tracing::info!("enqueued");
-
-    enqueue_tasks
-        .tx
-        .send_async(1usize)
+    event_tx
+        .send_async(Event::TaskEnqueued)
         .await
         .expect("send task");
 
     Json(id)
+}
+
+async fn events(Extension(event_rx): Extension<Receiver<Event>>) -> impl IntoApiResponse {
+    Sse::new(event_rx.into_stream().map(|x| {
+        axum::response::sse::Event::default()
+            .event("update")
+            .json_data(x)
+    }))
+    .into_response()
 }
 
 pub fn api_router(api: &mut OpenApi) -> axum::Router<AppState> {
@@ -91,6 +97,15 @@ pub fn api_router(api: &mut OpenApi) -> axum::Router<AppState> {
         .route("/api", Redoc::new("/api/openapi.json").axum_route())
         .route("/api/openapi.json", get(serve_api))
         .nest("/", admin_routes())
+        .api_route(
+            "/api/v1/events",
+            get_with(events, |r| {
+                r.summary("/api/v1/events")
+                    .description("get realtime events. This is a server sent event stream, but I can't figure out how to document it in openapi.")
+                    .tag("internal")
+                    .response::<200, Json<Event>>()
+            }),
+        )
         .api_route("/api/v1/version", get(stub))
         .api_route("/api/v1/tasks", post(post_tasks))
         .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))

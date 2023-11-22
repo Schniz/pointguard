@@ -1,14 +1,13 @@
 mod admin;
-mod events;
 pub mod openapi;
 mod router;
 
 use axum::Extension;
 use db::postgres::PgPool;
-use events::EnqueuedTasks;
+use flume::{Receiver, Sender};
 use futures::Future;
 use pointguard_engine_postgres as db;
-use std::sync::Arc;
+use pointguard_types::Event;
 
 pub use router::api_router;
 
@@ -25,14 +24,18 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn serve(self, shutdown_signal: impl Future<Output = ()>) {
-        let enqueue_tasks = EnqueuedTasks::from(flume::unbounded());
+    pub async fn serve(
+        self,
+        shutdown_signal: impl Future<Output = ()>,
+        (events_tx, events_rx): (Sender<Event>, Receiver<Event>),
+    ) {
         let mut api = openapi::new();
 
         let mut app = api_router(&mut api)
             .with_state(AppState { db: self.pool })
             .layer(Extension(api))
-            .layer(Extension(Arc::new(enqueue_tasks)));
+            .layer(Extension(events_tx))
+            .layer(Extension(events_rx));
 
         #[cfg(debug_assertions)]
         {
