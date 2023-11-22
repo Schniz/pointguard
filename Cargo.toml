@@ -4,5 +4,6 @@ members = [
   "crates/web_api",
   "crates/engine_postgres",
   "crates/cli",
+  "crates/types",
 ]
 resolver = "2"

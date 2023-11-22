@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct InflightTask {
     pub id: i64,
@@ -11,6 +13,22 @@ pub struct InflightTask {
     pub retry_count: i32,
 
     cleaned_up: bool,
+}
+
+enum RetryStatus {
+    Retry,
+    GiveUp,
+    Bailed,
+}
+
+impl Display for RetryStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RetryStatus::Retry => write!(f, "retry"),
+            RetryStatus::GiveUp => write!(f, "giving up"),
+            RetryStatus::Bailed => write!(f, "bailed (not retriable)"),
+        }
+    }
 }
 
 impl InflightTask {
@@ -39,10 +57,37 @@ impl InflightTask {
         self.cleaned_up = true;
     }
 
-    pub async fn failed(mut self, conn: &sqlx::PgPool, message: &str) {
-        if self.max_retries == self.retry_count {
+    pub async fn failed(mut self, conn: &sqlx::PgPool, message: &str, retriable: bool) {
+        let status = if retriable && self.max_retries > self.retry_count {
+            RetryStatus::Retry
+        } else if retriable {
+            RetryStatus::GiveUp
+        } else {
+            RetryStatus::Bailed
+        };
+
+        if let RetryStatus::Retry = status {
+            sqlx::query!(
+                "
+                UPDATE
+                    tasks
+                SET
+                    worker_id = NULL,
+                    started_at = NULL,
+                    run_at = now() + retry_delay,
+                    updated_at = now(),
+                    retry_count = retry_count + 1
+                WHERE
+                    id = $1
+            ",
+                self.id,
+            )
+            .execute(conn)
+            .await
+            .expect("failed to update task");
+        } else {
             tracing::error!(
-                "task {} failed {} times, giving up",
+                "task {} failed {} times, {status}",
                 self.id,
                 self.retry_count + 1
             );
@@ -71,25 +116,6 @@ impl InflightTask {
             .await
             .expect("failed to delete task");
             tx.commit().await.expect("failed to commit transaction");
-        } else {
-            sqlx::query!(
-                "
-                UPDATE
-                    tasks
-                SET
-                    worker_id = NULL,
-                    started_at = NULL,
-                    run_at = now() + retry_delay,
-                    updated_at = now(),
-                    retry_count = retry_count + 1
-                WHERE
-                    id = $1
-            ",
-                self.id,
-            )
-            .execute(conn)
-            .await
-            .expect("failed to update task");
         }
 
         self.cleaned_up = true;

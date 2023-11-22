@@ -8,7 +8,7 @@ use aide::{
         routing::{get, post},
         ApiRouter, IntoApiResponse,
     },
-    openapi::{Info, OpenApi},
+    openapi::OpenApi,
     redoc::Redoc,
 };
 use axum::{
@@ -86,33 +86,8 @@ async fn post_tasks(
     Json(id)
 }
 
-pub fn api_router() -> (axum::Router<AppState>, OpenApi) {
-    let mut api = OpenApi {
-        info: Info {
-            description: Some("pointguard api".to_string()),
-            ..Info::default()
-        },
-        ..OpenApi::default()
-    };
-
-    // let mut components = aide::openapi::Components {
-    //     ..Default::default()
-    // };
-
-    // components.schemas.insert(
-    //     "hello".to_string(),
-    //     aide::openapi::SchemaObject {
-    //         json_schema: schemars::schema::Schema::Object(
-    //             schemars::schema_for!(NewTaskBody).schema,
-    //         ),
-    //         external_docs: None,
-    //         example: None,
-    //     },
-    // );
-
-    // api.components = Some(components);
-
-    let app = ApiRouter::new()
+pub fn api_router(api: &mut OpenApi) -> axum::Router<AppState> {
+    ApiRouter::new()
         .route("/api", Redoc::new("/api/openapi.json").axum_route())
         .route("/api/openapi.json", get(serve_api))
         .nest("/", admin_routes())
@@ -121,9 +96,7 @@ pub fn api_router() -> (axum::Router<AppState>, OpenApi) {
         .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
         .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
         .api_route("/api/v1/tasks/finished", get(get_finished_tasks))
-        .finish_api_with(&mut api, |api| api.default_response::<String>());
-
-    (app, api)
+        .finish_api_with(api, |api| api.default_response::<String>())
 }
 
 fn generate_nanoid() -> String {

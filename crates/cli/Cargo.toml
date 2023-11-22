@@ -9,6 +9,7 @@ edition = "2021"
 colored = "2.0.4"
 tracing-subscriber = "0.3.17"
 pointguard_engine_postgres = { path = "../engine_postgres" }
+pointguard_types = { path = "../types" }
 tokio = { version = "1.33.0", features = [
   "macros",
   "time",

@@ -1,14 +1,40 @@
 import * as Schema from "@effect/schema/Schema";
-import { Client } from "@pointguard/api-client";
+import { Client, components, paths } from "@pointguard/api-client";
+
+export * from "@pointguard/api-client";
+
+export const Retriable = Symbol.for("@pointguard/core/Retriable");
+const isNonRetriable = (e: unknown): boolean =>
+  typeof e === "object" &&
+  e !== null &&
+  (("retry" in e && e.retry === false) ||
+    (Retriable in e && e[Retriable] === false));
+export const isRetriable = (e: unknown): boolean => !isNonRetriable(e);
+
+export class RejectedError extends Error {
+  [Retriable] = false;
+  name = "RejectedJobError";
+}
+
+type AllEnqueueParameters =
+  paths["/api/v1/tasks"]["post"]["requestBody"]["content"]["application/json"];
 
 const EnqueueOptions = Schema.struct({
-  runAt: Schema.string.pipe(Schema.dateFromString, Schema.optional),
-  maxRetries: Schema.number.pipe(
-    Schema.greaterThanOrEqualTo(0),
+  runAt: Schema.string.pipe(
+    Schema.dateFromString,
+    Schema.nullable,
     Schema.optional
   ),
-  name: Schema.string.pipe(Schema.optional),
-});
+  maxRetries: Schema.number.pipe(
+    Schema.greaterThanOrEqualTo(0),
+    Schema.nullable,
+    Schema.optional
+  ),
+  name: Schema.string.pipe(Schema.nullable, Schema.optional),
+}) satisfies Schema.Schema<
+  Omit<AllEnqueueParameters, "data" | "jobName" | "endpoint">,
+  any
+>;
 
 const encodeEnqueueOptions = Schema.encodeSync(EnqueueOptions);
 
@@ -154,7 +180,7 @@ export const IncomingJob = Schema.struct({
   retryCount: Schema.number,
   maxRetries: Schema.number,
   createdAt: Schema.string.pipe(Schema.dateFromString),
-});
+}) satisfies Schema.Schema<components["schemas"]["InvokedTaskPayload"], any>;
 
 export type DecodedIncomingJob = Schema.Schema.To<typeof IncomingJob>;
 export type EncodedIncomingJob = Schema.Schema.From<typeof IncomingJob>;
