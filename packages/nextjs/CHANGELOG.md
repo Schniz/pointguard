@@ -1,5 +1,15 @@
 # @pointguard/nextjs
 
+## 0.0.5
+
+### Patch Changes
+
+- [#10](https://github.com/Schniz/pointguard/pull/10) [`26ea3d4`](https://github.com/Schniz/pointguard/commit/26ea3d4af0c246fad952526599f17fbc3b5b1130) Thanks [@Schniz](https://github.com/Schniz)! - use the webhook openapi definition for types
+
+  the Next.js adapter now returns 200 for all execution requests,
+  because we successfuly applied them. But the JSON might be an error
+  (that is managed by Pointguard). Errors are values, Exceptions are bugs.
+
 ## 0.0.4
 
 ### Patch Changes
