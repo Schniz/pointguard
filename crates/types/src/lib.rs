@@ -13,6 +13,10 @@ pub struct InvokedTaskPayload<'a> {
     pub created_at: &'a chrono::DateTime<chrono::Utc>,
 }
 
+const fn bool_true() -> bool {
+    true
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum InvokedTaskResponse {
@@ -23,7 +27,7 @@ pub enum InvokedTaskResponse {
         /// The reason why it failed
         reason: String,
         /// Whether or not this task is retriable
-        #[serde(default)]
+        #[serde(default = "bool_true")]
         retriable: bool,
     },
 }

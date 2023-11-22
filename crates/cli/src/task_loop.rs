@@ -1,6 +1,6 @@
 use futures::Future;
 use pointguard_engine_postgres::{self as db, postgres::PgPool};
-use pointguard_types::InvokedTaskPayload;
+use pointguard_types::{InvokedTaskPayload, InvokedTaskResponse};
 
 #[tracing::instrument(skip_all, fields(id = %task.id, endpoint = %task.endpoint))]
 async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool) {
@@ -17,16 +17,25 @@ async fn execute_task(http: reqwest::Client, task: db::InflightTask, db: PgPool)
         .await
         .and_then(|res| res.error_for_status());
 
+    let response = match response {
+        Err(err) => Err(err),
+        Ok(res) => res.json::<InvokedTaskResponse>().await,
+    }
+    .unwrap_or_else(|err| InvokedTaskResponse::Failure {
+        reason: err.to_string(),
+        retriable: true,
+    });
+
     match response {
-        Ok(_) => {
+        InvokedTaskResponse::Success {} => {
             tracing::info!("invocation completed");
             task.done(&db).await;
         }
-        Err(err) => {
-            tracing::error!("invocation failed: {err}");
-            task.failed(&db, &err.to_string()).await;
+        InvokedTaskResponse::Failure { reason, retriable } => {
+            tracing::error!("invocation failed: {reason}");
+            task.failed(&db, &reason, retriable).await;
         }
-    }
+    };
 }
 
 pub async fn run(db: db::postgres::PgPool, termination: impl Future<Output = ()>) {

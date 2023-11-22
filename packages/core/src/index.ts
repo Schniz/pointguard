@@ -1,6 +1,21 @@
 import * as Schema from "@effect/schema/Schema";
 import { Client, components, paths } from "@pointguard/api-client";
 
+export * from "@pointguard/api-client";
+
+export const Retriable = Symbol.for("@pointguard/core/Retriable");
+const isNonRetriable = (e: unknown): boolean =>
+  typeof e === "object" &&
+  e !== null &&
+  (("retry" in e && e.retry === false) ||
+    (Retriable in e && e[Retriable] === false));
+export const isRetriable = (e: unknown): boolean => !isNonRetriable(e);
+
+export class RejectedError extends Error {
+  [Retriable] = false;
+  name = "RejectedJobError";
+}
+
 type AllEnqueueParameters =
   paths["/api/v1/tasks"]["post"]["requestBody"]["content"]["application/json"];
 

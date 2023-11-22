@@ -1,7 +1,4 @@
-use aide::{
-    openapi::{Info, MediaType, OpenApi, Operation, PathItem},
-    OperationOutput,
-};
+use aide::openapi::{Info, OpenApi, Operation, PathItem};
 use axum::Json;
 use pointguard_types::{InvokedTaskPayload, InvokedTaskResponse};
 use schemars::JsonSchema;
