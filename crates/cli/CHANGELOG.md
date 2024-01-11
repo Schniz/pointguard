@@ -1,5 +1,13 @@
 # @pointguard/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- [#13](https://github.com/Schniz/pointguard/pull/13) [`3cdffec`](https://github.com/Schniz/pointguard/commit/3cdffec818ebd59ff9241bc21d5118169731b777) Thanks [@Schniz](https://github.com/Schniz)! - Add JSON tracing output
+
+- [#10](https://github.com/Schniz/pointguard/pull/10) [`26ea3d4`](https://github.com/Schniz/pointguard/commit/26ea3d4af0c246fad952526599f17fbc3b5b1130) Thanks [@Schniz](https://github.com/Schniz)! - add executeTask webhook with the request/response schemas
+
 ## 0.0.5
 
 ### Patch Changes
