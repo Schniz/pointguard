@@ -1,4 +1,5 @@
 mod task_loop;
+mod tracing_config;
 
 use clap::{Parser, Subcommand};
 use futures::future::FutureExt;
@@ -6,29 +7,31 @@ use pointguard_engine_postgres as db;
 use pointguard_web_api::Server;
 use std::fmt::Display;
 
-pub fn init_logging() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "pointguard=debug");
-    }
-
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_writer(std::io::stderr)
-        .init();
-}
-
+#[tracing::instrument(skip_all, fields(%host, %port))]
 pub fn print_welcome_message(host: impl Display, port: impl Display) {
     use colored::Colorize;
     let orange = colored::CustomColor::new(255, 140, 0);
     let url = format!("http://{}:{}", host, port).custom_color(orange);
 
-    eprintln!();
-    eprintln!("  🏀 pointguard is ready to play at {url}");
-    eprintln!();
+    tracing::info!("🏀 pointguard is ready to play at {url}");
 }
 
 #[derive(Parser, Debug)]
 struct Cli {
+    /// The tracing format to use.
+    ///
+    /// "pretty" prints human-readable output to stderr.
+    /// "json" prints machine-readable output to stderr.
+    #[clap(
+        long,
+        env = "TRACING_FORMAT",
+        default_value_t,
+        global = true,
+        verbatim_doc_comment
+    )]
+    #[arg(value_enum)]
+    tracing_format: tracing_config::TracingFormat,
+
     #[clap(subcommand)]
     subcommand: Command,
 }
@@ -45,18 +48,27 @@ enum Command {
 
 #[derive(Parser, Debug)]
 struct Serve {
+    /// A PostgreSQL connnection string to use.
     #[clap(long, env = "DATABASE_URL")]
     database_url: String,
 
-    #[clap(long, env = "HOST", default_value = "127.0.0.1")]
+    /// The host to bind to.
+    ///
+    /// "0.0.0.0" will bind to all network interfaces,
+    /// "127.0.0.1" will bind to localhost.
+    #[clap(long, env = "HOST", default_value = "127.0.0.1", verbatim_doc_comment)]
     host: String,
 
+    /// The port to listen to for incoming requests
     #[clap(long, env = "PORT", default_value = "8080")]
     port: u16,
 
+    /// Run migrations on startup,
+    /// if the database schema is not up to date.
     #[clap(long = "migrate")]
     should_migrate: bool,
 
+    /// A database schema to use
     #[clap(long = "database-schema", env = "DATABASE_SCHEMA")]
     schema: Option<String>,
 }
@@ -94,9 +106,11 @@ impl Serve {
 
 #[tokio::main]
 async fn main() {
-    init_logging();
+    let config = Cli::parse();
 
-    match Cli::parse().subcommand {
+    tracing_config::init(&config.tracing_format);
+
+    match config.subcommand {
         Command::Serve(serve) => serve.call().await,
         Command::OpenApiSpec(spec) => spec.call(),
     }
