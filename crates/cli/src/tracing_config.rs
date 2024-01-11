@@ -20,10 +20,14 @@ pub fn init(format: &TracingFormat) {
     }
 
     match format {
-        TracingFormat::Json => tracing_subscriber::fmt()
-            .json()
-            .with_writer(std::io::stderr)
-            .init(),
+        TracingFormat::Json => {
+            tracing_subscriber::fmt()
+                .json()
+                .with_writer(std::io::stderr)
+                .init();
+
+            colored::control::set_override(false);
+        }
         TracingFormat::Pretty => tracing_subscriber::fmt()
             .pretty()
             .with_writer(std::io::stderr)

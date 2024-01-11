@@ -7,14 +7,13 @@ use pointguard_engine_postgres as db;
 use pointguard_web_api::Server;
 use std::fmt::Display;
 
+#[tracing::instrument(skip_all, fields(%host, %port))]
 pub fn print_welcome_message(host: impl Display, port: impl Display) {
     use colored::Colorize;
     let orange = colored::CustomColor::new(255, 140, 0);
     let url = format!("http://{}:{}", host, port).custom_color(orange);
 
-    eprintln!();
-    eprintln!("  🏀 pointguard is ready to play at {url}");
-    eprintln!();
+    tracing::info!("🏀 pointguard is ready to play at {url}");
 }
 
 #[derive(Parser, Debug)]
