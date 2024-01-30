@@ -2,7 +2,7 @@ import intervalToDuration from "date-fns/intervalToDuration";
 import { apiClient } from "../api-client";
 import { useTypedLoaderData } from "../swr";
 import formatDuration from "date-fns/formatDuration";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoEmptyState } from "../logo-empty-state";
 import { Link, LoaderFunctionArgs, useSearchParams } from "react-router-dom";
 import { twMerge } from "tailwind-merge";
@@ -12,6 +12,7 @@ import {
   LucideChevronDown,
   LucideChevronUp,
 } from "lucide-react";
+import * as Toolbar from "@radix-ui/react-toolbar";
 
 type LoaderData = Awaited<ReturnType<typeof loader>>;
 
@@ -37,7 +38,7 @@ export function Component() {
 
 function withValues(
   searchParams: URLSearchParams,
-  newValues: [string, string][]
+  newValues: [string, string][],
 ) {
   const newSearchParams = new URLSearchParams(searchParams.toString());
 
@@ -51,49 +52,75 @@ function withValues(
 function Pagination(props: { totalPages: number; page: number }) {
   const [searchParams] = useSearchParams();
   const previousStyle =
-    "block text-sm px-2 font-medium text-white data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-30 py-2 py-2 flex space-x-1 items-center aria-current:underline underline-offset-4 hover:underline hover:decoration-orange-300 hover:text-orange-200";
+    "text-sm px-2 font-medium text-white data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-30 py-2 py-2 flex space-x-1 items-center aria-current:underline underline-offset-4 hover:underline hover:decoration-orange-300 hover:text-orange-200";
   const iconStyle = "block w-4 h-4";
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    toolbarRef.current?.querySelector("[aria-current=page]")?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [props.page]);
 
   return (
-    <div className="flex items-center justify-center bg-orange-500 px-4 py-2">
-      <Link
-        className={previousStyle}
-        data-disabled={props.page <= 1}
-        to={{
-          search: `?${withValues(searchParams, [
-            ["page", String(Math.max(props.page - 1, 1))],
-          ])}`,
-        }}
-      >
-        <LucideStepBack className={iconStyle} />
-      </Link>
-      {Array.from({ length: props.totalPages }).map((_, i) => {
-        const page = i + 1;
-        return (
-          <Link
-            {...{ "aria-current": props.page === page ? "page" : undefined }}
-            key={page}
-            className={twMerge(previousStyle, "tabular-nums")}
-            to={{
-              search: `?${withValues(searchParams, [["page", String(page)]])}`,
-            }}
-          >
-            {page}
-          </Link>
-        );
-      })}
-      <Link
-        className={previousStyle}
-        data-disabled={props.page >= props.totalPages}
-        to={{
-          search: `?${withValues(searchParams, [
-            ["page", String(Math.min(props.page + 1, props.totalPages))],
-          ])}`,
-        }}
-      >
-        <LucideStepForward className={iconStyle} />
-      </Link>
-    </div>
+    <Toolbar.Root
+      ref={toolbarRef}
+      className="bg-orange-500 flex w-full items-center"
+      style={{
+        scrollbarGutter: "stable",
+      }}
+    >
+      <Toolbar.Button asChild>
+        <Link
+          className={previousStyle}
+          data-disabled={props.page <= 1}
+          to={{
+            search: `?${withValues(searchParams, [
+              ["page", String(Math.max(props.page - 1, 1))],
+            ])}`,
+          }}
+        >
+          <LucideStepBack className={iconStyle} />
+        </Link>
+      </Toolbar.Button>
+      <div className="flex-1 overflow-x-auto scroll-smooth scroll-gutter-stable">
+        <div className="flex items-center">
+          {Array.from({ length: props.totalPages }).map((_, i) => {
+            const page = i + 1;
+            return (
+              <Toolbar.Button asChild key={page}>
+                <Link
+                  {...{
+                    "aria-current": props.page === page ? "page" : undefined,
+                  }}
+                  className={twMerge(previousStyle, "tabular-nums")}
+                  to={{
+                    search: `?${withValues(searchParams, [["page", String(page)]])}`,
+                  }}
+                >
+                  {page}
+                </Link>
+              </Toolbar.Button>
+            );
+          })}
+        </div>
+      </div>
+      <Toolbar.Button asChild>
+        <Link
+          className={previousStyle}
+          data-disabled={props.page >= props.totalPages}
+          to={{
+            search: `?${withValues(searchParams, [
+              ["page", String(Math.min(props.page + 1, props.totalPages))],
+            ])}`,
+          }}
+        >
+          <LucideStepForward className={iconStyle} />
+        </Link>
+      </Toolbar.Button>
+    </Toolbar.Root>
   );
 }
 
@@ -109,13 +136,13 @@ function Row({
       intervalToDuration({
         start: new Date(task.startedAt),
         end: new Date(task.createdAt),
-      })
+      }),
     ) || "blazing";
   const [open, setOpen] = useState(false);
 
   const backgroundStyle = twMerge(
     "bg-white text-gray-900 px-4 py-4 flex items-center text-sm",
-    index % 2 === 0 && "bg-gray-50"
+    index % 2 === 0 && "bg-gray-50",
   );
 
   return (
@@ -133,7 +160,7 @@ function Row({
       <div
         className={twMerge(
           backgroundStyle,
-          "whitespace-nowrap text-gray-600 block"
+          "whitespace-nowrap text-gray-600 block",
         )}
       >
         <div className="font-medium">{task.jobName}</div>
@@ -142,7 +169,7 @@ function Row({
       <div
         className={twMerge(
           backgroundStyle,
-          "whitespace-nowrap text-gray-600 flex flex-col justify-center"
+          "whitespace-nowrap text-gray-600 flex flex-col justify-center",
         )}
       >
         <div>{duration}</div>
@@ -164,7 +191,7 @@ function Row({
         <pre
           className={twMerge(
             backgroundStyle,
-            "col-span-5 text-gray-500 font-mono"
+            "col-span-5 text-gray-500 font-mono",
           )}
         >
           {JSON.stringify(task.data, null, 2)}
