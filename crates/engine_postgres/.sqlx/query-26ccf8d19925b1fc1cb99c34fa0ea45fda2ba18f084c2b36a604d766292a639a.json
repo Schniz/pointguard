@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tasks\n        SET\n            run_at = now(),\n            updated_at = now()\n        WHERE id IN (\n            SELECT id\n            FROM tasks\n            LEFT OUTER JOIN running_workers ON tasks.worker_id = running_workers.application_name\n            WHERE\n                id = $1\n                AND running_workers.application_name IS NULL\n        )\n        RETURNING id, pg_notify($2, json_build_object('run_at', run_at, 'id', id)::text)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "pg_notify",
+        "type_info": "Void"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "26ccf8d19925b1fc1cb99c34fa0ea45fda2ba18f084c2b36a604d766292a639a"
+}
