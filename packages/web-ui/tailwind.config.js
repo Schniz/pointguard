@@ -1,4 +1,5 @@
 import plugin from "tailwindcss/plugin";
+import tailwindScrollbar from "tailwind-scrollbar";
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -7,6 +8,7 @@ export default {
     extend: {},
   },
   plugins: [
+    tailwindScrollbar({ nocompatible: true }),
     plugin(({ addVariant }) => {
       addVariant("aria-current", `&[aria-current]`);
     }),

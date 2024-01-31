@@ -5,6 +5,6 @@ export const SayHello = defineJob({
   name: "my-job",
   async handler(input: { name: string }) {
     await setTimeout(5000);
-    console.log(`Hello ${input.name}!`);
+    throw new Error("can't create hatraa because kakakasdjnajsdf");
   },
 });
