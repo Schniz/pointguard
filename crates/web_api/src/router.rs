@@ -9,7 +9,7 @@ use aide::{
     redoc::Redoc,
 };
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     response::{IntoResponse, Redirect, Sse},
     Extension, Json,
 };
@@ -52,6 +52,16 @@ async fn cancel_task(
     let _task = db::cancel_task(&state.db, path.id)
         .await
         .expect("cancel task");
+    Redirect::to("/api/v1/tasks/enqueued")
+}
+
+async fn unshift_task(
+    State(state): State<AppState>,
+    axum::extract::Path(path): axum::extract::Path<CancelTaskParams>,
+) -> impl IntoApiResponse {
+    let _task = db::unshift_job(&state.db, path.id)
+        .await
+        .expect("unshift task");
     Redirect::to("/api/v1/tasks/enqueued")
 }
 
@@ -109,6 +119,7 @@ pub fn api_router(api: &mut OpenApi) -> axum::Router<AppState> {
         .api_route("/api/v1/version", get(stub))
         .api_route("/api/v1/tasks", post(post_tasks))
         .api_route("/api/v1/tasks/:id/cancel", post(cancel_task))
+        .api_route("/api/v1/tasks/:id/unshift", post(unshift_task))
         .api_route("/api/v1/tasks/enqueued", get(get_enqueued_tasks))
         .api_route("/api/v1/tasks/finished", get(get_finished_tasks))
         .finish_api_with(api, |api| api.default_response::<String>())

@@ -84,6 +84,27 @@ function Row({ task, refetch }: { task: LoaderData[number]; refetch(): void }) {
             onClick={(e) => {
               e.stopPropagation();
 
+              if (!confirm("Are you sure you want to unshift this task?")) {
+                return;
+              }
+
+              apiClient
+                .path("/api/v1/tasks/{id}/unshift")
+                .method("post")
+                .create()({
+                  id: task.id,
+                })
+                .finally(refetch);
+            }}
+            type="submit"
+            className="inline-block py-2 px-3 rounded-xl hover:underline decoration-orange-400 text-orange-500"
+          >
+            Unshift
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+
               if (!confirm("Are you sure you want to cancel this task?")) {
                 return;
               }

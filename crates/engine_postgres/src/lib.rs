@@ -46,21 +46,16 @@ pub struct PaginationCursor {
 pub async fn cancel_task(db: &PgPool, id: i64) -> Result<Option<i64>, sqlx::Error> {
     let task = sqlx::query!(
         "
-        DELETE FROM
-            tasks
-        WHERE
-            id = $1
-            AND (
-                worker_id IS NULL
-                OR worker_id NOT IN (
-                    SELECT
-                        application_name
-                    FROM
-                        running_workers
-                )
-            )
-        RETURNING
-            id
+        DELETE FROM tasks
+        WHERE id IN (
+            SELECT id
+            FROM tasks
+            LEFT OUTER JOIN running_workers ON tasks.worker_id = running_workers.application_name
+            WHERE
+                id = $1
+                AND running_workers.application_name IS NULL
+        )
+        RETURNING id
         ",
         id
     )
@@ -95,6 +90,37 @@ pub async fn enqueued_tasks(db: &PgPool) -> Result<Vec<EnqueuedTask>, sqlx::Erro
     )
     .fetch_all(db)
     .await
+}
+
+#[tracing::instrument(skip(db))]
+pub async fn unshift_job(db: &PgPool, task_id: i64) -> Result<Option<i64>, sqlx::Error> {
+    let task = sqlx::query!(
+        "
+        UPDATE tasks
+        SET
+            run_at = now(),
+            updated_at = now()
+        WHERE id IN (
+            SELECT id
+            FROM tasks
+            LEFT OUTER JOIN running_workers ON tasks.worker_id = running_workers.application_name
+            WHERE
+                id = $1
+                AND running_workers.application_name IS NULL
+        )
+        RETURNING id, pg_notify($2, json_build_object('run_at', run_at, 'id', id)::text)
+        ",
+        task_id,
+        constants::NEW_TASK_QUEUE,
+    )
+    .fetch_optional(db)
+    .await?;
+
+    if task.is_none() {
+        tracing::warn!(%task_id, "can't find non-running task")
+    }
+
+    Ok(task.map(|t| t.id))
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
