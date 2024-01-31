@@ -1,5 +1,11 @@
 # @pointguard/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- [#16](https://github.com/Schniz/pointguard/pull/16) [`eb4a1ac`](https://github.com/Schniz/pointguard/commit/eb4a1ac2e6af818a33fe83228d2e6672d540f088) Thanks [@Schniz](https://github.com/Schniz)! - allow to unshift tasks
+
 ## 0.0.6
 
 ### Patch Changes
