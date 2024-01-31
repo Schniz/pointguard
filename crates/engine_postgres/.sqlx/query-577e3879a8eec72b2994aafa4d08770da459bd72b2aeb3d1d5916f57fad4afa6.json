@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM tasks\n        WHERE id IN (\n            SELECT id\n            FROM tasks\n            LEFT OUTER JOIN running_workers ON tasks.worker_id = running_workers.application_name\n            WHERE\n                id = $1\n                AND running_workers.application_name IS NULL\n        )\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "577e3879a8eec72b2994aafa4d08770da459bd72b2aeb3d1d5916f57fad4afa6"
+}
